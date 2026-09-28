@@ -2,7 +2,7 @@
 
 ## Цель
 
-Собрать учебную модель доступа: группа проекта, общий каталог, ограниченный sudo.
+Собрать учебную модель доступа: группа проекта, общий каталог, ACL, ограниченный sudo; проверить отказами.
 
 ## Окружение
 
@@ -16,18 +16,22 @@
 ```bash
 id
 getent passwd | tail -5
+getent group
 ls -ld /home
 sudo -l
+umask
 ```
+
+Запишите текующий `umask` в заметки.
 
 ### 2. Change — пользователи и группа
 
 Создайте:
 
 - группу `opslab`
-- пользователей `dev1` и `ops1` (с домашними каталогами и bash)
-- `dev1` и `ops1` в группе `opslab`
-- каталог `/srv/opslab` с владельцем `root:opslab` и правами `2770` (SGID на каталоге)
+- пользователей `dev1` и `ops1` (домашние + bash)
+- обоих в `opslab`
+- `/srv/opslab` с `root:opslab` и `2770` (SGID)
 
 ```bash
 sudo groupadd opslab
@@ -40,55 +44,77 @@ sudo chown root:opslab /srv/opslab
 sudo chmod 2770 /srv/opslab
 ```
 
-Задайте пароли учебные и запишите их только в локальные заметки стенда.
+Учебные пароли — только в локальные заметки стенда.
 
-### 3. Change — общий файл и ACL
+### 3. Change — общий файл, SGID, ACL
 
-1. От пользователя `dev1` создайте `/srv/opslab/notes.txt`.
-2. Проверьте, что `ops1` может читать/писать благодаря группе.
-3. Создайте пользователя `guest1` **без** группы `opslab`.
-4. Через ACL выдайте `guest1` только чтение `notes.txt` (не запись).
+1. От `dev1` создайте `/srv/opslab/notes.txt`.
+2. Проверьте: новый файл наследует группу `opslab` (SGID).
+3. `ops1` читает/пишет благодаря группе.
+4. Создайте `guest1` **без** `opslab`.
+5. ACL: `guest1` — только чтение `notes.txt`.
 
-### 4. Change — ограниченный sudo
+```bash
+sudo setfacl -m u:guest1:r -- /srv/opslab/notes.txt
+getfacl /srv/opslab/notes.txt
+```
 
-Разрешите `ops1` перезапускать `cron`/`crond` без полного root (через `/etc/sudoers.d/ops1`).
+### 4. Verify — негативные тесты доступа
 
-Пример идеи (адаптируйте имя unit/сервиса под дистрибутив):
+От разных пользователей (через `su -`):
+
+1. `guest1` — **не** может `ls`/`cd` в `/srv/opslab`? или не может писать в `notes` — зафиксируйте фактическое поведение.
+2. `guest1` — попытка записи в `notes.txt` должна провалиться.
+3. Посторонний файл: создайте `/srv/opslab/secret.env` mode `640`, убедитесь что `guest1` не читает даже при желании «угадать путь», если каталог недоступен.
+
+Сохраните выводы в `~/lab-notes/03-evidence.txt`.
+
+### 5. Change — ограниченный sudo
+
+`/etc/sudoers.d/ops1` (через `visudo -f`):
 
 ```text
 ops1 ALL=(root) NOPASSWD: /bin/systemctl restart cron, /bin/systemctl restart crond, /bin/systemctl status cron, /bin/systemctl status crond
 ```
 
-Проверьте синтаксис: `sudo visudo -c`.
-
-### 5. Verify
-
-От разных пользователей покажите:
-
 ```bash
-# как guest1 — нет входа в /srv/opslab листингом? или нет записи в notes
-# как ops1 — sudo systemctl status cron/crond работает
-# getfacl /srv/opslab/notes.txt
+sudo visudo -c
+sudo visudo -f /etc/sudoers.d/ops1
 ```
 
-Сохраните доказательства в `~/lab-notes/03-evidence.txt` (копируйте выводы).
+Проверка: `ops1` может `sudo systemctl status cron|crond`, но **не** может `sudo id` / `sudo bash` (негативный тест).
 
-### 6. Document
+### 6. Change — sticky bit (демо)
 
-В `~/lab-notes/03.md` объясните, зачем `2770` на каталоге проекта.
+```bash
+sudo mkdir -p /srv/opslab/tmp-sticky
+sudo chmod 1770 /srv/opslab/tmp-sticky
+# от dev1 и ops1 создайте по файлу; попробуйте удалить чужой — ожидайте отказ
+```
+
+Кратко в заметках: зачем sticky на `/tmp`.
+
+### 7. Automate — проверка модели доступа
+
+Скрипт `/usr/local/bin/lab-check-opslab.sh` (root): проверяет существование группы/пользователей, режим `/srv/opslab`, наличие ACL на `notes.txt`. Exit 0/1.
+
+### 8. Document
+
+В `~/lab-notes/03.md`: зачем `2770`; чем ACL лучше «добавить всех в группу»; риск полного sudo у `ops1`.
 
 ## Критерии приёмки
 
 - [ ] Пользователи `dev1`, `ops1`, `guest1` существуют
-- [ ] `/srv/opslab` имеет группу `opslab` и режим с SGID
-- [ ] `guest1` читает файл по ACL, но не пишет
-- [ ] `ops1` имеет ограниченный sudo на systemctl для cron/crond
-- [ ] Есть файл доказательств
+- [ ] `/srv/opslab` — группа `opslab` + SGID
+- [ ] `guest1` читает по ACL, не пишет; негативные тесты зафиксированы
+- [ ] `ops1` — ограниченный sudo; полный sudo не работает
+- [ ] Показан sticky-bit отказ на чужой файл
+- [ ] Есть evidence и check-скрипт
 
 ## Подсказки
 
-- Новые группы применяются после перелогина: `su - user` или новый SSH-сеанс.
-- Ошибки sudoers чинятся с `visudo`; не редактируйте sudoers «вслепую» под root без проверки.
+- Новые группы — после `su - user` / нового SSH.
+- sudoers только через `visudo`.
 
 ## Очистка (опционально)
 
