@@ -2,11 +2,11 @@
 
 ## Цель
 
-Привести стенд к воспроизводимому mid+ состоянию, пережить инцидент с postmortem и сдать handoff с evidence pack.
+Привести стенд к воспроизводимому mid+ состоянию, добавить **одно усиление** из эшелона 16–20 (HA / identity / containers), пережить инцидент с postmortem и сдать handoff с evidence pack.
 
 ## Окружение
 
-- Стенд после модулей 01–11 и **13–15**
+- Стенд после модулей 01–11, **13–15** и желательно **16–20**
 - `cli` для acceptance, DR, Prometheus
 - Снимок `capstone-final` в конце
 
@@ -26,16 +26,26 @@
 10. **Ansible-built:** inventory srv+cli; ключевые роли (packages/users/sshd/firewall/nginx+tls/timer) применены playbooks; есть `check` evidence и заметка о handlers.  
 11. **DR:** off-host копия + timed restore drill с числами RPO/RTO.  
 12. **Health/logs:** timer health-check не отменяет пункт 9.  
-13. **HANDOFF.md** + **12-postmortem.md**.  
-14. **Evidence pack** `~/lab-notes/12-evidence/`.
+13. **Эшелон-усиление (must — выберите ≥1):**  
+    - **HA** — VIP/keepalived или nginx upstream failover + failover drill ([модуль 18](../18-ha-reliability/)); **или**  
+    - **Identity** — SSSD/LDAP (или FreeIPA-lite): `getent` + SSH доменным user + break-glass ([модуль 17](../17-identity-sssd/)); **или**  
+    - **Containers** — host run+volume+publish **и** k8s lite Deploy+Service+probes ([модуль 19](../19-containers-orchestration/)).  
+14. **HANDOFF.md** + **12-postmortem.md**.  
+15. **Evidence pack** `~/lab-notes/12-evidence/`.
 
-«HTTPS optional» / «Ansible optional» — **не** уровень сдачи.
+«HTTPS optional» / «Ansible optional» / «эшелон потом» — **не** уровень сдачи.
+
+### Should (сильно рекомендуется)
+
+- Baseline/пороги из [16](../16-performance-capacity/) в handoff или alert notes.  
+- DNS lab / WireGuard / zones из [20](../20-advanced-networking/), если уже собраны.  
+- Второе эшелон-усиление сверх must-выбора.
 
 ### Порядок работы
 
 #### A. Inspect — gap-list
 
-`12-gap-list.md` по must-пунктам. Снимок `12-before/` (`ss`, `findmnt`, firewall, timers, `getenforce`/`aa-status`, `curl -k https`, prometheus targets).
+`12-gap-list.md` по must-пунктам (включая выбранное усиление 17/18/19). Снимок `12-before/`.
 
 #### B. Change — закрытие gaps
 
@@ -54,6 +64,7 @@ ssh … 'hostname; findmnt /srv/data; curl -sk https://127.0.0.1/ | head'
 curl -vk https://<IP-srv>/ 2>&1 | head -40
 # NFS mount при наличии
 # Prometheus: target srv UP; один alert rule виден
+# Эшелон: curl VIP/LB  ИЛИ  getent+ssh domain user  ИЛИ  kubectl/curl NodePort
 ```
 
 #### D. Change — мини-инцидент + postmortem
@@ -67,18 +78,19 @@ curl -vk https://<IP-srv>/ 2>&1 | head -40
 | 3 | Сломан nginx TLS/конфиг |
 | 4 | Алерт disk/service — довести до firing и погасить |
 | 5 | Off-host бэкап просрочен > RPO |
+| 6 | Отказ одного HA backend / LDAP down без break-glass check / pod NotReady |
 
 `12-incident.md` (хронология) + `12-postmortem.md` (структура из theory).
 
 #### E. Automate — evidence pack
 
-`12-evidence/`: inventory, sshd hardening, firewall, findmnt, tls-curl, nfs/exports или rationale, mac-status, prometheus-targets, alert-drill, ansible-check-apply, backup-restore-drill (RPO/RTO), timers, incident, postmortem.
+`12-evidence/`: inventory, sshd hardening, firewall, findmnt, tls-curl, nfs/exports или rationale, mac-status, prometheus-targets, alert-drill, ansible-check-apply, backup-restore-drill (RPO/RTO), timers, **эшелон-evidence** (ha/identity/k8s), incident, postmortem.
 
 Опционально `lab-capstone-gather.sh`.
 
 #### F. Document — HANDOFF
 
-Ответы на вопросы theory + ссылки на playbooks и alert rules.
+Ответы на вопросы theory + ссылки на playbooks, alert rules и выбранный модуль 17/18/19.
 
 #### G. Финал
 
@@ -96,18 +108,22 @@ curl -vk https://<IP-srv>/ 2>&1 | head -40
 | Metrics + alerts | must | target UP + alert drill |
 | Ansible-built | must | playbooks + check/apply evidence |
 | Off-host DR + RPO/RTO | must | drill notes с числами |
+| Эшелон: HA **или** identity **или** containers | must | drill/getent/kubectl evidence по выбору |
 | Мини-инцидент | must | incident + повторный acceptance |
 | Postmortem | must | `12-postmortem.md` |
 | Evidence pack | must | каталог `12-evidence/` |
 | HANDOFF | must | полные ответы |
 | NFS или эквивалент | must | mount или rationale |
+| Perf thresholds (16) | should | ссылка в handoff/alerts |
+| Adv net (20) | should | DNS/WG/zones если есть |
 | Gap-list | should | закрыт |
 
 ## Подсказки
 
 - Оценивается дисциплина оператора, не «красота» HTML.
 - Drift вручную после Ansible — долг в handoff.
-- Не светите учебные пароли в публичных копиях handoff.
+- Не светите учебные пароли и WG private keys в публичных копиях handoff.
+- Ссылки на модули эшелона: [16](../16-performance-capacity/), [17](../17-identity-sssd/), [18](../18-ha-reliability/), [19](../19-containers-orchestration/), [20](../20-advanced-networking/).
 
 ## Очистка
 

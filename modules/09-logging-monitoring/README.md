@@ -4,7 +4,7 @@
 
 **Время:** 2–3 часа  
 **Зависит от:** 08  
-**Дальше:** metrics + alerts (модуль 14) — health-check здесь мост, не потолок mid+.
+**Дальше:** metrics + alerts ([модуль 14](../14-observability-metrics/)) — health-check здесь мост, не потолок mid+; живой triage load/IO — [модуль 16](../16-performance-capacity/).
 
 | Файл | Содержание |
 |------|------------|

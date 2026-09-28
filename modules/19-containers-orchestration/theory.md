@@ -1,0 +1,37 @@
+# Теория — containers + k8s lite
+
+## Контейнер vs ВМ
+
+Контейнер разделяет ядро хоста, упаковывает процесс+зависимости, быстро стартует.  
+Для mid+: уметь **запустить**, **сохранить данные** (volume), **опубликовать порт**, **перезапускать через systemd**.
+
+Рекомендация курса: **Podman** (rootless по возможности) или Docker — один стек на весь lab.
+
+## Host lifecycle
+
+| Подход | Когда |
+|--------|-------|
+| `podman run` / `docker run` | быстрый эксперимент |
+| Compose / pod yaml | несколько связанных контейнеров |
+| systemd unit / **Quadlet** | автостарт как службы хоста |
+
+## k8s lite (учебный минимум)
+
+Понятия:
+
+- **Pod** — единица scheduling;
+- **Deployment** — реплики + rolling;
+- **Service** — стабильная точка доступа (ClusterIP/NodePort);
+- **probes** — liveness/readiness (когда перезапускать / слать трафик).
+
+Кластер для lab на 1–2 ВМ (выберите один):
+
+| Стек | Плюс | Минус |
+|------|------|-------|
+| **k3s** | простой install на `srv`, мало RAM | «почти прод», но всё ещё учебный |
+| **kind** | быстрый Kubernetes-in-Docker | нужен container runtime |
+| minikube | привычный UX | тяжелее по ресурсам |
+
+Не цель: CNI deep-dive, operators, Helm umbrella, multi-AZ.
+
+Связь с **10/18**: Service ≈ стабильный endpoint; probes ≈ health-check; HA реплик — следующий шаг после одного Deployment.

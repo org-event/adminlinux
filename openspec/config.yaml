@@ -5,15 +5,16 @@ context: |
   All artifacts must be written in ru.
   Keep OpenSpec structural headings and SHALL/MUST keywords in English.
 
-  Проект: практический последовательный курс «Администрирование Linux» (mid+ MVP / senior-track foundation).
+  Проект: практический последовательный курс «Администрирование Linux» (mid+ + эшелон после MVP).
   Целевая аудитория: middle+ и переход junior→middle; не развлекательный junior-only трек.
   Референс-дистрибутивы: Debian 12 / Ubuntu 22.04+ LTS (AppArmor) и Rocky Linux 9 / AlmaLinux 9 (SELinux).
-  Формат: модули по порядку 01–11 → 13–15 → 12 (капстоун); в каждом — краткая теория, лабораторная работа, критерии приёмки.
+  Формат: модули по порядку 01–11 → 13–15 → 16–20 → 12 (капстоун); в каждом — краткая теория, лабораторная работа, критерии приёмки.
   Педагогический цикл: Inspect → Change → Verify → Document → Automate.
-  Mid+ must в капстоуне: TLS/HTTPS, metrics+alerts, Ansible-built (или apply playbooks), off-host DR drill с RPO/RTO, postmortem.
+  Mid+ must в капстоуне: TLS/HTTPS, metrics+alerts, Ansible-built (или apply playbooks), off-host DR drill с RPO/RTO, postmortem;
+  плюс ≥1 усиление из HA (18) / identity (17) / containers (19); should: perf (16), advanced net (20).
   Практику только в ВМ/контейнере/песочнице, не на боевых хостах.
   Материалы курса лежат в course/ и modules/; OpenSpec описывает структуру и правила контента.
-  Вне MVP (backlog 16–23): HA, SSSD/LDAP full, Kubernetes, глубокий perf — не включать без отдельного change.
+  Backlog за эшелоном 16–20: FreeIPA replicas, Pacemaker, CKA-depth, eBPF deep-dive — не включать без отдельного change.
 
 rules:
   proposal:
@@ -31,7 +32,7 @@ operations:
   apply:
     guidance:
       - Не ломать нумерацию модулей без обновления syllabus
-      - Капстоун остаётся modules/12-capstone; mid+ модули 13–15 идут перед ним в программе
+      - Капстоун остаётся modules/12-capstone; mid+ 13–15 и эшелон 16–20 идут перед ним в программе
       - Сохранять единый шаблон lab.md (Цель, Окружение, Задания, Критерии приёмки, Подсказки, Очистка)
       - Dual-distro таблицы там, где команды Debian/Ubuntu и Rocky/Alma расходятся
   archive:

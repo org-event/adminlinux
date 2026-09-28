@@ -1,0 +1,88 @@
+# Лаборатория 16 — baseline, деградация, capacity notes
+
+## Цель
+
+Снять baseline `srv`, смоделировать одну деградацию, найти виновника через vmstat/iostat/pidstat и оформить пороги + capacity notes.
+
+## Окружение
+
+- `srv` (+ `cli` опционально для генерации HTTP-нагрузки)
+- Пакет `sysstat` / `stress-ng` (или эквивалент)
+- Снимок гипервизора перед memory/disk stress
+- Метрики модуля 14 желательны для сопоставления
+
+## Задания
+
+### 1. Inspect
+
+```bash
+uptime; free -h; nproc
+vmstat 1 5
+# при наличии:
+iostat -xz 1 3
+pidstat -urd 1 3
+```
+
+Зафиксируйте idle-снимок → `~/lab-notes/16-baseline.txt` (команды + вывод).
+
+### 2. Change — nominal load
+
+С `cli` или локально: умеренный HTTP к HTTPS/nginx (модуль 10) **или** короткий бэкап-скрипт.
+
+Сохраните `16-nominal.txt` (те же команды, что в baseline).
+
+### 3. Change — сценарий деградации (один на выбор)
+
+| Сценарий | Идея | Ожидаемый след |
+|----------|------|----------------|
+| A CPU | `stress-ng --cpu $(nproc) --timeout 60s` | load↑, %user↑, pidstat top = stress |
+| B Disk | запись на учебный LV/loop (`dd if=/dev/zero of=/srv/data/lab-stress.bin bs=1M count=512 oflag=direct`) | iowait/util↑ |
+| C Memory | `stress-ng --vm 1 --vm-bytes 70% --timeout 45s` (осторожно) | free↓, возможен swap |
+
+Параллельно во втором SSH: `vmstat 1`, `iostat -xz 1`, `pidstat …`.
+
+Evidence: `16-degrade-<scenario>.txt` + короткий `16-triage.md` (что увидели первым).
+
+### 4. Verify
+
+1. Назовите bottleneck одной фразой (CPU / disk / memory).
+2. Негатив: после остановки stress показатели возвращаются к baseline (±шум) — зафиксируйте.
+3. Если есть Prometheus: отметьте, отразился ли пик на графике/метриках (ссылка на 14).
+
+### 5. Document — пороги и capacity
+
+`16-thresholds.md`:
+
+- load / 5m — warning и critical *для этого стенда*;
+- disk util или await;
+- MemAvailable / swap activity;
+- что **не** алертить (шум).
+
+`16-capacity-notes.md`: 3–5 предложений — при росте нагрузки что упрётся первым и какой сигнал смотреть.
+
+### 6. Automate
+
+`/usr/local/bin/lab-perf-snapshot.sh` → пишет timestamp + `uptime` + `vmstat 1 3` + `free -h` в `~/lab-notes/perf/`.  
+Запуск вручную или timer раз в час (не must enable).
+
+## Критерии приёмки
+
+- [ ] Baseline и nominal сохранены
+- [ ] Один сценарий деградации с triage-заметкой
+- [ ] Bottleneck назван и подтверждён выводом инструментов
+- [ ] Пороги + capacity notes написаны
+- [ ] Snapshot-скрипт работает
+- [ ] Цикл Inspect→Change→Verify→Document→Automate пройден
+
+## Подсказки
+
+| Семья | Заметки |
+|-------|---------|
+| Debian/Ubuntu | `apt install sysstat stress-ng` |
+| Rocky/Alma | `dnf install sysstat stress-ng` |
+
+`iostat` может требовать `systemctl enable --now sysstat` на некоторых дистрах — для lab достаточно ручных выборок.
+
+## Очистка
+
+Удалите `lab-stress.bin` и остановите stress. Скрипт snapshot оставьте.
