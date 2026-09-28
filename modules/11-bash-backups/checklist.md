@@ -1,7 +1,7 @@
 # Чеклист — модуль 11
 
 - [ ] bash с `set -euo pipefail`
-- [ ] Off-host target настроен и проверен
+- [ ] Второй target (другой хост / диск) настроен и проверен
 - [ ] RPO/RTO записаны числами
 - [ ] Timed restore drill выполнен
 - [ ] Timer + report свежести

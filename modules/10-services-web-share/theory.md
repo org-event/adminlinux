@@ -8,9 +8,9 @@
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-Конфиги: `/etc/nginx/`. Document root учебной площадки: `/var/www/lab`.
+Конфиги: `/etc/nginx/`. Корень сайта (document root) учебной площадки: `/var/www/lab`. Всегда `nginx -t` перед reload.
 
-## TLS (must для mid+)
+## TLS (обязательно для mid+)
 
 В лаборатории достаточно **самоподписанного** сертификата (или внутреннего CA). Цель — привычка: HTTPS, редирект/раздельные listen, проверка с клиента, открытый `443/tcp` в firewall.
 
@@ -24,11 +24,11 @@ sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 В server block: `listen 443 ssl;`, пути к crt/key, `ssl_protocols TLSv1.2 TLSv1.3;`.  
 С клиента: `curl -vk https://<IP>/` (или установка учебного CA в trust store `cli`).
 
-HTTP (80) — либо редирект на HTTPS, либо явная статус-страница с ссылкой; «только plaintext навсегда» для mid+ **не принимается**.
+HTTP (80) — либо редирект на HTTPS, либо явная статус-страница с ссылкой. «Только plaintext навсегда» для mid+ **не принимается**.
 
 ## NFS
 
-Экспорт **только** в host-only/lab подсеть. `exportfs -rav`, проверка с `cli`. Учитывать `root_squash`.
+Экспорт **только** в host-only/lab подсеть. `exportfs -rav`, проверка с `cli`. Учитывайте `root_squash`.
 
 | Семья | Пакет | Сервис |
 |-------|-------|--------|
@@ -38,4 +38,4 @@ HTTP (80) — либо редирект на HTTPS, либо явная стат
 ## Безопасность
 
 - Слушать нужный интерфейс; firewall: `443/tcp` (+ `80` если нужен), NFS только lab.
-- SELinux/AppArmor могут блокировать TLS-пути и NFS — см. модуль 13 (здесь: не отключать MAC «навсегда»).
+- SELinux/AppArmor могут блокировать TLS-пути и NFS — см. модуль 13. Здесь: не отключайте MAC «навсегда».

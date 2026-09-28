@@ -1,18 +1,18 @@
-# Лаборатория 08 — SSH и hardening
+# Лаборатория 08 — SSH и усиление защиты
 
-## Цель
+## Зачем эта лаба
 
-Настроить вход по ключу, ужесточить sshd безопасным порядком шагов и проверить негативными тестами (пароль, root, права на ключи).
+Настроите вход по ключу, ужесточите sshd безопасным порядком шагов и проверите негативными тестами (пароль, root, права на ключи).
 
-## Окружение
+## Стенд
 
 - `srv` + машина-клиент (`cli` или ваш хост)
 - Снимок `before-ssh-hardening`
 - **Консоль гипервизора открыта**
 
-## Задания
+## Шаги
 
-### 1. Inspect — текущая политика sshd
+### 1. Осмотр — текущая политика sshd
 
 ```bash
 sudo systemctl status ssh || sudo systemctl status sshd
@@ -27,9 +27,9 @@ sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak.$(date +%F)
 sudo mkdir -p /etc/ssh/sshd_config.d
 ```
 
-Сохраните «до» в `~/lab-notes/08-sshd-before.txt` (`sshd -T` выборка).
+Сохраните «до» в `~/lab-notes/08-sshd-before.txt` (выборка `sshd -T`).
 
-### 2. Change — ключи (безопасный порядок)
+### 2. Изменение — ключи (безопасный порядок)
 
 1. На клиенте создайте ключ ed25519 (отдельный учебный файл, с comment):
 
@@ -42,13 +42,13 @@ ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_lab -C "lab-admin@$(hostname)"
 4. Войдите **второй** сессией только по ключу.
 5. Только после этого переходите к отключению паролей.
 
-### 3. Verify — негативный тест прав на ключи
+### 3. Проверка — негативный тест прав на ключи
 
 1. На `srv` временно выставьте `chmod 777 ~/.ssh` или `666 authorized_keys`.
-2. Попробуйте войти по ключу — sshd часто **отклонит** ключ. Зафиксируйте в `~/lab-notes/08-keyperms.txt`.
-3. Верните `700`/`600` и подтвердите вход.
+2. Попробуйте войти по ключу — sshd часто **отклонит** ключ. Сохраните вывод в `~/lab-notes/08-keyperms.txt`.
+3. Верните `700`/`600` и подтвердите вход. Если не вышло — сначала права, потом уже конфиг.
 
-### 4. Change — sshd hardening
+### 4. Изменение — усиление sshd
 
 Файл `/etc/ssh/sshd_config.d/99-lab-hardening.conf` (если поддерживается drop-in):
 
@@ -58,7 +58,7 @@ PermitRootLogin no
 PubkeyAuthentication yes
 KbdInteractiveAuthentication no
 MaxAuthTries 3
-# опционально для учебной ВМ с одним админом:
+# по желанию для учебной ВМ с одним админом:
 # AllowUsers youruser
 ```
 
@@ -69,7 +69,7 @@ sudo systemctl reload ssh || sudo systemctl reload sshd
 
 Сохраните «после»: `sshd -T` в `~/lab-notes/08-sshd-after.txt`.
 
-### 5. Verify — негативные тесты доступа
+### 5. Проверка — негативные тесты доступа
 
 С клиента:
 
@@ -84,16 +84,16 @@ ssh -i ~/.ssh/id_ed25519_lab user@srv
 ssh -i ~/.ssh/id_ed25519_lab root@srv || true
 ```
 
-Все выводы — в `~/lab-notes/08-evidence.txt`.
+Все выводы — в `~/lab-notes/08-checks.txt` (пакет доказательств).
 
-### 6. Change — banner и сессионные параметры (практика)
+### 6. Изменение — banner и сессионные параметры (практика)
 
 1. Создайте `/etc/ssh/lab-banner.txt` с предупреждением «учебный стенд».
 2. Добавьте в drop-in: `Banner /etc/ssh/lab-banner.txt`.
-3. Опционально: `ClientAliveInterval 60` и `ClientAliveCountMax 3`.
+3. По желанию: `ClientAliveInterval 60` и `ClientAliveCountMax 3`.
 4. `sshd -t` + reload; при новом логине banner виден.
 
-### 7. Change (рекомендуется) — fail2ban
+### 7. Изменение (желательно) — fail2ban
 
 | Семья | Установка |
 |-------|-----------|
@@ -108,7 +108,7 @@ sudo fail2ban-client status
 sudo fail2ban-client status sshd || sudo fail2ban-client status ssh
 ```
 
-### 8. Automate — проверка hardening одной командой
+### 8. Автоматизация — проверка hardening одной командой
 
 Скрипт `/usr/local/bin/lab-ssh-audit.sh` на `srv`:
 
@@ -116,26 +116,26 @@ sudo fail2ban-client status sshd || sudo fail2ban-client status ssh
 - проверяет, что `passwordauthentication no`, `permitrootlogin no`;
 - код 0 если политика ок, иначе 1.
 
-### 9. Document
+### 9. Запись
 
 Runbook в `~/lab-notes/08.md`: «закрыли себе SSH — восстановление через консоль» (single user / login на консоли → правка drop-in → `sshd -t` → reload).
 
-## Критерии приёмки
+## Приёмка
 
 - [ ] Вход по ключу работает
 - [ ] Вход паролем отключён (негативный тест)
 - [ ] Root login по SSH запрещён (негативный тест)
 - [ ] Негативный тест прав `~/.ssh` выполнен и откатан
-- [ ] Есть бэкап sshd_config, before/after, evidence
+- [ ] Есть бэкап sshd_config, before/after и сохранённые выводы
 - [ ] Есть скрипт audit и runbook восстановления
-- [ ] (Рекомендуется) fail2ban показывает jail ssh
+- [ ] (Желательно) fail2ban показывает jail ssh
 
-## Подсказки
+## Если застряли
 
 - Держите старую SSH-сессию открытой до проверки новой.
 - Имя сервиса: `ssh` (Debian) vs `sshd` (RHEL).
 - Не отключайте пароли, пока ключ не проверен второй сессией.
 
-## Очистка
+## Итоговое состояние
 
-Состояние hardened — целевое. Откат только снимок/консоль.
+Hardened — целевое состояние. Откат только снимок или консоль.

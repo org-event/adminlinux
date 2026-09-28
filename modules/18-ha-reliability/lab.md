@@ -2,7 +2,7 @@
 
 ## Цель
 
-Собрать один из двух стендов HA lite, явно уронить узел и доказать, что сервис остаётся доступен (или деградирует предсказуемо), затем задокументировать оставшиеся SPOF.
+Соберите один из двух стендов HA lite, явно уроните узел и докажите, что сервис остаётся доступен (или деградирует предсказуемо), затем задокументируйте оставшиеся SPOF.
 
 ## Окружение
 
@@ -13,7 +13,7 @@
 
 ## Задания
 
-### 1. Inspect
+### 1. Осмотр
 
 ```bash
 ip -br a; ip route
@@ -23,23 +23,23 @@ ss -tulpn | grep -E '80|443|nginx'
 
 Нарисуйте текущий путь клиента → сервис и отметьте SPOF (`18-spof-before.md`).
 
-### 2. Change — выберите ветку
+### 2. Изменение — выберите ветку
 
 #### Ветка A — keepalived + VIP
 
 1. Одинаковый учебный HTTP(S) на двух нодах (или nginx на обеих с одним `index`).
 2. `keepalived` на обеих: `virtual_ipaddress`, `priority`, `advert_int`, простой `vrrp_script` (проверка `pidof nginx` / `curl localhost`).
 3. С `cli`: `curl http://<VIP>/` (или HTTPS) стабильно отвечает.
-4. Evidence: `ip a` на master с VIP → `18-vip-master.txt`.
+4. Сохраните вывод: `ip a` на master с VIP → `18-vip-master.txt`.
 
 #### Ветка B — nginx upstream failover
 
 1. Два backend: например nginx на `srv` и второй инстанс на `cli:8080` (или podman).
 2. На LB-хосте (часто `cli`): `upstream` с двумя server; `proxy_pass`; `max_fails=1 fail_timeout=10s`.
 3. Health: `curl` на LB VIP/имя → 200.
-4. Evidence: конфиг upstream + `18-upstream.conf` копия.
+4. Сохраните: конфиг upstream + копия `18-upstream.conf`.
 
-### 3. Verify — отказ узла (must)
+### 3. Проверка — отказ узла (обязательно)
 
 1. Остановите **один** backend / master (`systemctl stop nginx` или `ip link` / stop keepalived на master).
 2. Сразу и через 15–30 с: `curl` на VIP/LB — ожидаете успех (или краткий обрыв + успех).
@@ -47,7 +47,7 @@ ss -tulpn | grep -E '80|443|nginx'
 4. Негатив: остановите **оба** backend — сервис мёртв; зафиксируйте как оставшийся класс отказа.
 5. Поднимите узлы обратно; VIP/upstream снова зелёный.
 
-### 4. Document — карта SPOF после
+### 4. Документ — карта SPOF после
 
 `18-spof-after.md`:
 
@@ -55,7 +55,7 @@ ss -tulpn | grep -E '80|443|nginx'
 - что осталось (LB, диск, DNS, LDAP, единственный Prometheus…);
 - почему этого достаточно для mid+ lab.
 
-### 5. Automate
+### 5. Автоматизация
 
 `lab-ha-smoke.sh`: `curl -fsS` к VIP/LB URL, exit 1 при fail. Запуск с `cli`.
 

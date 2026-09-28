@@ -2,7 +2,7 @@
 
 ## Цель
 
-Поднять локальный DNS для имён lab, туннель WireGuard srv↔cli и явную зонную/egress-политику с негативными тестами.
+Поднимите локальный DNS для имён lab, туннель WireGuard srv↔cli и явную зонную/egress-политику с негативными тестами.
 
 ## Окружение
 
@@ -12,7 +12,7 @@
 
 ## Задания
 
-### 1. Inspect
+### 1. Осмотр
 
 ```bash
 resolvectl status 2>/dev/null || cat /etc/resolv.conf
@@ -21,14 +21,14 @@ ip -br a; sudo nft list ruleset 2>/dev/null | head || firewall-cmd --get-active-
 
 Зафиксируйте текущий DNS и открытые сервисы → `20-before.txt`.
 
-### 2. Change — DNS-as-service на `srv`
+### 2. Изменение — DNS как сервис на `srv`
 
 1. Установите **dnsmasq** или **Unbound**.
 2. Статические имена: `srv.lab` → IP srv, `cli.lab` → IP cli (и при наличии VIP — `app.lab`).
 3. Слушать lab IP / localhost; firewall: UDP/TCP 53 только из lab.
 4. На `cli` (и srv): nameserver = IP srv (netplan/NetworkManager/`resolv.conf` — по дистрибутиву, с бэкапом).
 
-Verify:
+Проверьте:
 
 ```bash
 dig +short srv.lab @<IP-srv>
@@ -37,19 +37,19 @@ ping -c 1 srv.lab
 
 Негатив: запрос с «чужого» адреса (если можете) или отсутствие записи → NXDOMAIN.
 
-Evidence: `20-dns.txt`.
+Сохраните вывод: `20-dns.txt`.
 
-### 3. Change — WireGuard srv↔cli
+### 3. Изменение — WireGuard srv↔cli
 
 1. Пакет `wireguard` / `wireguard-tools`.
 2. Ключи на обоих хостах; конфиги `/etc/wireguard/wg0.conf` (PrivateKey, Address, Peer PublicKey, Endpoint=lab IP, AllowedIPs=10.66.0.0/24, PersistentKeepalive=25 на cli).
 3. `wg-quick up wg0` / enable `wg-quick@wg0`.
-4. Verify: `ping 10.66.0.1` с cli; `wg show`.
+4. Проверьте: `ping 10.66.0.1` с cli; `wg show`.
 5. Прогоните один сервис через WG (например `curl http://10.66.0.1:8080/` или dig через WG IP).
 
-Evidence: `20-wg-show.txt` (без приватных ключей в notes!).
+Сохраните вывод: `20-wg-show.txt` (без приватных ключей в notes!).
 
-### 4. Change — zones / egress
+### 4. Изменение — зоны / egress
 
 Минимум:
 
@@ -63,7 +63,7 @@ Evidence: `20-wg-show.txt` (без приватных ключей в notes!).
 | Rocky/Alma | `firewall-cmd --permanent --zone=… --change-interface=…`; policy objects при наличии |
 | Debian/Ubuntu | nftables table inet filter + комментарии зон; ufw только если уже используете — опишите ограничения |
 
-### 5. Verify — сводный сценарий
+### 5. Проверка — сводный сценарий
 
 С `cli`:
 
@@ -73,11 +73,11 @@ Evidence: `20-wg-show.txt` (без приватных ключей в notes!).
 
 Хронология в `20-verify.md`.
 
-### 6. Automate
+### 6. Автоматизация
 
 `lab-advnet-smoke.sh` на cli: dig srv.lab, ping WG peer, exit 1 при fail.
 
-### 7. Document
+### 7. Документ
 
 Карта имён, WG addressing, зоны, egress-исключения, долги (нет split-DNS prod, нет MFA на WG).
 

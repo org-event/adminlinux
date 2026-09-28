@@ -2,56 +2,56 @@
 
 ## Цель
 
-Привести стенд к воспроизводимому mid+ состоянию, добавить **одно усиление** из эшелона 16–20 (HA / identity / containers), пережить инцидент с postmortem и сдать handoff с evidence pack.
+Соберите стенд mid+, который можно заново объяснить и сдать. Добавьте **одно усиление** из модулей 16–20 (HA / identity / containers), переживите инцидент с postmortem и сдайте документ передачи смены (`HANDOFF.md`) с пакетом доказательств.
 
 ## Окружение
 
 - Стенд после модулей 01–11, **13–15** и желательно **16–20**
-- `cli` для acceptance, DR, Prometheus
+- `cli` для внешних проверок, DR и Prometheus
 - Снимок `capstone-final` в конце
 
 ## Задания
 
-### Обязательный объём (must)
+### Обязательный объём
 
 1. **Идентичность:** hostname, inventory.  
-2. **SSH:** ключ only, без root/password login.  
+2. **SSH:** только ключ, без root/password login.  
 3. **Роли:** оператор + opslab/данные.  
 4. **LVM** данные + автомонтирование.  
 5. **Firewall** минимален, каждое правило обосновано.  
 6. **HTTPS:** nginx + TLS, проверка с `cli` (`curl -vk https://…`).  
 7. **NFS** в lab-сеть **или** раздел «почему без» с компенсирующим контролем.  
 8. **MAC:** SELinux enforcing или AppArmor enabled; нет «отключено навсегда».  
-9. **Metrics + alerts:** exporter + Prometheus (или зафиксированный аналог модуля 14); алерты disk/service/HTTP; evidence срабатывания.  
-10. **Ansible-built:** inventory srv+cli; ключевые роли (packages/users/sshd/firewall/nginx+tls/timer) применены playbooks; есть `check` evidence и заметка о handlers.  
-11. **DR:** off-host копия + timed restore drill с числами RPO/RTO.  
+9. **Метрики + алерты:** exporter + Prometheus (или зафиксированный аналог модуля 14); алерты disk/service/HTTP; доказательства срабатывания.  
+10. **Стенд на Ansible:** inventory srv+cli; ключевые роли (packages/users/sshd/firewall/nginx+tls/timer) применены playbooks; есть доказательства `check` и заметка о handlers.  
+11. **DR:** копия на другой хост + timed restore drill с числами RPO/RTO.  
 12. **Health/logs:** timer health-check не отменяет пункт 9.  
-13. **Эшелон-усиление (must — выберите ≥1):**  
+13. **Усиление из модулей 16–20 (обязательно — выберите ≥1):**  
     - **HA** — VIP/keepalived или nginx upstream failover + failover drill ([модуль 18](../18-ha-reliability/)); **или**  
     - **Identity** — SSSD/LDAP (или FreeIPA-lite): `getent` + SSH доменным user + break-glass ([модуль 17](../17-identity-sssd/)); **или**  
     - **Containers** — host run+volume+publish **и** k8s lite Deploy+Service+probes ([модуль 19](../19-containers-orchestration/)).  
-14. **HANDOFF.md** + **12-postmortem.md**.  
-15. **Evidence pack** `~/lab-notes/12-evidence/`.
+14. **`HANDOFF.md`** (документ передачи смены) + **`12-postmortem.md`**.  
+15. **Пакет доказательств** `~/lab-notes/12-evidence/`.
 
-«HTTPS optional» / «Ansible optional» / «эшелон потом» — **не** уровень сдачи.
+«HTTPS потом» / «Ansible потом» / «усиление потом» — **не** уровень сдачи.
 
-### Should (сильно рекомендуется)
+### Желательно (сильно рекомендуется)
 
-- Baseline/пороги из [16](../16-performance-capacity/) в handoff или alert notes.  
-- DNS lab / WireGuard / zones из [20](../20-advanced-networking/), если уже собраны.  
-- Второе эшелон-усиление сверх must-выбора.
+- Baseline/пороги из [16](../16-performance-capacity/) в `HANDOFF.md` или в заметках к алертам.  
+- DNS lab / WireGuard / зоны из [20](../20-advanced-networking/), если уже собраны.  
+- Второе усиление сверх обязательного выбора.
 
 ### Порядок работы
 
-#### A. Inspect — gap-list
+#### A. Осмотр — список пробелов
 
-`12-gap-list.md` по must-пунктам (включая выбранное усиление 17/18/19). Снимок `12-before/`.
+`12-gap-list.md` по обязательным пунктам (включая выбранное усиление 17/18/19). Снимок `12-before/`.
 
-#### B. Change — закрытие gaps
+#### B. Изменение — закрытие пробелов
 
 По одному; после Ansible-правок — `check` + apply. Не переписывайте стенд вручную в обход playbooks без записи drift.
 
-#### C. Verify — acceptance с `cli`
+#### C. Проверка — сдача с `cli`
 
 Сохраните `12-acceptance.txt`:
 
@@ -64,10 +64,10 @@ ssh … 'hostname; findmnt /srv/data; curl -sk https://127.0.0.1/ | head'
 curl -vk https://<IP-srv>/ 2>&1 | head -40
 # NFS mount при наличии
 # Prometheus: target srv UP; один alert rule виден
-# Эшелон: curl VIP/LB  ИЛИ  getent+ssh domain user  ИЛИ  kubectl/curl NodePort
+# Усиление: curl VIP/LB  ИЛИ  getent+ssh domain user  ИЛИ  kubectl/curl NodePort
 ```
 
-#### D. Change — мини-инцидент + postmortem
+#### D. Изменение — мини-инцидент + postmortem
 
 Один сценарий (воспроизвести → устранить → postmortem):
 
@@ -77,18 +77,18 @@ curl -vk https://<IP-srv>/ 2>&1 | head -40
 | 2 | Убран allow SSH в firewall |
 | 3 | Сломан nginx TLS/конфиг |
 | 4 | Алерт disk/service — довести до firing и погасить |
-| 5 | Off-host бэкап просрочен > RPO |
+| 5 | Бэкап на другой хост просрочен > RPO |
 | 6 | Отказ одного HA backend / LDAP down без break-glass check / pod NotReady |
 
 `12-incident.md` (хронология) + `12-postmortem.md` (структура из theory).
 
-#### E. Automate — evidence pack
+#### E. Автоматизация — пакет доказательств
 
-`12-evidence/`: inventory, sshd hardening, firewall, findmnt, tls-curl, nfs/exports или rationale, mac-status, prometheus-targets, alert-drill, ansible-check-apply, backup-restore-drill (RPO/RTO), timers, **эшелон-evidence** (ha/identity/k8s), incident, postmortem.
+`12-evidence/`: inventory, sshd hardening, firewall, findmnt, tls-curl, nfs/exports или обоснование «почему без», mac-status, prometheus-targets, alert-drill, ansible-check-apply, backup-restore-drill (RPO/RTO), timers, **доказательства усиления** (ha/identity/k8s), incident, postmortem.
 
-Опционально `lab-capstone-gather.sh`.
+По желанию `lab-capstone-gather.sh`.
 
-#### F. Document — HANDOFF
+#### F. Документ — `HANDOFF.md`
 
 Ответы на вопросы theory + ссылки на playbooks, alert rules и выбранный модуль 17/18/19.
 
@@ -100,30 +100,30 @@ curl -vk https://<IP-srv>/ 2>&1 | head -40
 
 | Критерий | Вес | Доказательство |
 |----------|-----|----------------|
-| SSH hardened | must | отказ пароля + вход ключом |
-| HTTPS с cli | must | `curl -vk` / openssl |
-| LVM данные | must | findmnt, lsblk |
-| Firewall минимален | must | rules + обоснование |
-| MAC не выключен | must | getenforce / aa-status |
-| Metrics + alerts | must | target UP + alert drill |
-| Ansible-built | must | playbooks + check/apply evidence |
-| Off-host DR + RPO/RTO | must | drill notes с числами |
-| Эшелон: HA **или** identity **или** containers | must | drill/getent/kubectl evidence по выбору |
-| Мини-инцидент | must | incident + повторный acceptance |
-| Postmortem | must | `12-postmortem.md` |
-| Evidence pack | must | каталог `12-evidence/` |
-| HANDOFF | must | полные ответы |
-| NFS или эквивалент | must | mount или rationale |
-| Perf thresholds (16) | should | ссылка в handoff/alerts |
-| Adv net (20) | should | DNS/WG/zones если есть |
-| Gap-list | should | закрыт |
+| SSH hardened | обязательно | отказ пароля + вход ключом |
+| HTTPS с cli | обязательно | `curl -vk` / openssl |
+| LVM данные | обязательно | findmnt, lsblk |
+| Firewall минимален | обязательно | rules + обоснование |
+| MAC не выключен | обязательно | getenforce / aa-status |
+| Метрики + алерты | обязательно | target UP + alert drill |
+| Стенд на Ansible | обязательно | playbooks + check/apply, сохранённый вывод |
+| DR на другой хост + RPO/RTO | обязательно | заметки drill с числами |
+| Усиление: HA **или** identity **или** containers | обязательно | drill/getent/kubectl — по выбору |
+| Мини-инцидент | обязательно | incident + повторная проверка с `cli` |
+| Postmortem | обязательно | `12-postmortem.md` |
+| Пакет доказательств | обязательно | каталог `12-evidence/` |
+| `HANDOFF.md` | обязательно | полные ответы |
+| NFS или эквивалент | обязательно | mount или обоснование «почему без» |
+| Пороги perf (16) | желательно | ссылка в `HANDOFF.md` / алертах |
+| Adv net (20) | желательно | DNS/WG/zones если есть |
+| Список пробелов | желательно | закрыт |
 
 ## Подсказки
 
-- Оценивается дисциплина оператора, не «красота» HTML.
-- Drift вручную после Ansible — долг в handoff.
-- Не светите учебные пароли и WG private keys в публичных копиях handoff.
-- Ссылки на модули эшелона: [16](../16-performance-capacity/), [17](../17-identity-sssd/), [18](../18-ha-reliability/), [19](../19-containers-orchestration/), [20](../20-advanced-networking/).
+- Оцениваются аккуратность и порядок работы, не «красота» HTML.
+- Drift вручную после Ansible — долг в `HANDOFF.md`.
+- Не светите учебные пароли и WG private keys в публичных копиях документа передачи смены.
+- Ссылки на усиления: [16](../16-performance-capacity/), [17](../17-identity-sssd/), [18](../18-ha-reliability/), [19](../19-containers-orchestration/), [20](../20-advanced-networking/).
 
 ## Очистка
 

@@ -11,7 +11,7 @@
 
 ## Задания
 
-### 1. Inspect — дерево процессов и failed units
+### 1. Осмотр — дерево процессов и failed units
 
 ```bash
 ps -ef --forest | head -40
@@ -24,9 +24,9 @@ journalctl -b -p err -n 30 --no-pager
 1. Найдите PID вашей shell и PPID; запишите в `~/lab-notes/06-ps.txt`.
 2. Найдите процесс с наибольшим RSS (`ps aux --sort=-rss | head`) — одной строкой в заметках.
 
-### 2. Change — скрипт heartbeat
+### 2. Изменение — скрипт heartbeat
 
-Создайте `/usr/local/bin/lab-heartbeat.sh`:
+Сделайте `/usr/local/bin/lab-heartbeat.sh`:
 
 ```bash
 #!/bin/bash
@@ -39,9 +39,9 @@ echo "$(date -Is) heartbeat host=$(hostname) load=$(cut -d' ' -f1-3 /proc/loadav
 
 Права: `755`, владелец `root:root`. Создайте лог-файл с корректными правами.
 
-### 3. Change — service и timer
+### 3. Изменение — service и timer
 
-Создайте:
+Сделайте:
 
 - `/etc/systemd/system/lab-heartbeat.service` (`Type=oneshot`, `ExecStart=/usr/local/bin/lab-heartbeat.sh`)
 - `/etc/systemd/system/lab-heartbeat.timer` (каждые **2 минуты**, `Persistent=true`)
@@ -53,7 +53,7 @@ systemctl list-timers | grep lab-heartbeat
 systemctl cat lab-heartbeat.service lab-heartbeat.timer
 ```
 
-### 4. Verify — журнал и минимум два срабатывания
+### 4. Проверка — журнал и минимум два срабатывания
 
 ```bash
 systemctl status lab-heartbeat.timer --no-pager
@@ -61,23 +61,23 @@ sudo journalctl -u lab-heartbeat.service -n 30 --no-pager
 tail -5 /var/log/lab-heartbeat.log
 ```
 
-Дождитесь **двух** записей в логе с разным временем.
+Дождитесь **двух** записей в логе с разным временем. Если не вышло — смотрите `systemctl status lab-heartbeat.timer` и `journalctl -u lab-heartbeat.service`.
 
-### 5. Change — сигналы и процессы
+### 5. Изменение — сигналы и процессы
 
 1. Запустите в одном терминале: `sleep 300 &` — запомните PID.
 2. Отправьте `SIGSTOP`, проверьте `STAT` в `ps`, затем `SIGCONT`.
 3. Завершите через `SIGTERM`, убедитесь что процесса нет.
 4. Кратко в заметках: чем `kill` / `kill -9` отличаются для админа.
 
-### 6. Verify — мини-инцидент failed unit
+### 6. Проверка — мини-инцидент failed unit
 
 1. Сломайте `ExecStart` в service (несуществующий путь), `daemon-reload`, запустите service вручную.
-2. Зафиксируйте `systemctl status` + `journalctl -u` в `~/lab-notes/06-incident.txt`.
+2. Сохраните вывод `systemctl status` + `journalctl -u` в `~/lab-notes/06-incident.txt`.
 3. Верните правильный путь, `daemon-reload`, `start` — unit снова успешен.
-4. Покажите `systemctl reset-failed` при необходимости.
+4. При необходимости покажите `systemctl reset-failed`.
 
-### 7. Verify — disable vs mask
+### 7. Проверка — disable vs mask
 
 На **учебном** timer:
 
@@ -95,7 +95,7 @@ sudo systemctl enable --now lab-heartbeat.timer
 
 В `~/lab-notes/06.md` одной таблицей: `stop` / `disable` / `mask`.
 
-### 8. Automate — oneshot по требованию
+### 8. Автоматизация — oneshot по требованию
 
 Добавьте возможность ручного прогона без ожидания timer:
 
@@ -105,7 +105,7 @@ sudo systemctl start lab-heartbeat.service
 
 Убедитесь, что в логе появилась новая строка.
 
-### 9. Document
+### 9. Запись
 
 В `~/lab-notes/06.md`: разница `service` и `timer`; куда смотреть при сбое (`status`, `journalctl -u`, `systemctl --failed`).
 
@@ -116,15 +116,15 @@ sudo systemctl start lab-heartbeat.service
 - [ ] Отработаны сигналы STOP/CONT/TERM
 - [ ] Мини-инцидент failed unit: сломали → нашли в journal → починили
 - [ ] Понятна разница disable vs mask (с unmask)
-- [ ] Есть заметки Document + incident evidence
+- [ ] Есть заметки и сохранённый вывод по инциденту
 
 ## Подсказки
 
 - После правок unit всегда `daemon-reload`.
-- `Type=oneshot` + timer — типичный паттерн для cron-замен.
+- `Type=oneshot` + timer — типичный паттерн для замены cron.
 - Не маскируйте системные службы (`ssh`/`sshd`, `network`) «для эксперимента».
 
-## Очистка (опционально)
+## Очистка (по желанию)
 
 ```bash
 sudo systemctl disable --now lab-heartbeat.timer

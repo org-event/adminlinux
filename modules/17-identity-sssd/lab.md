@@ -2,7 +2,7 @@
 
 ## Цель
 
-Поднять каталог на `srv`, подключить SSSD на `cli` (и по желанию на `srv`), доказать `getent`/SSH/группы/sudo и break-glass при отказе LDAP.
+Поднимите каталог на `srv`, подключите SSSD на `cli` (и по желанию на `srv`), докажите `getent`/SSH/группы/sudo и break-glass при отказе LDAP.
 
 ## Окружение
 
@@ -15,7 +15,7 @@
 
 ## Задания
 
-### 1. Inspect
+### 1. Осмотр
 
 ```bash
 getent passwd | wc -l
@@ -23,22 +23,22 @@ grep -E 'passwd|group|shadow' /etc/nsswitch.conf
 ss -tulpn | grep -E '22|389|636' || true
 ```
 
-Зафиксируйте локальных admin-пользователей (break-glass кандидат).
+Зафиксируйте локальных admin-пользователей (кандидат на break-glass).
 
-### 2. Change — каталог на `srv`
+### 2. Изменение — каталог на `srv`
 
 **Ветка OpenLDAP (рекомендуется):**
 
 1. Установите `slapd` / `openldap-servers` по семье дистрибутива.
 2. База: суффикс вида `dc=lab,dc=local`, admin DN, учебный пароль.
 3. Добавьте OU `People` / `Groups`, пользователя `alice`, группу `opslab` (GID согласован с политикой 03).
-4. Проверка с srv: `ldapsearch -x -b dc=lab,dc=local '(uid=alice)'`.
+4. Проверьте с srv: `ldapsearch -x -b dc=lab,dc=local '(uid=alice)'`.
 
 **Ветка FreeIPA-lite:** `ipa-server-install` в lab (фиксируйте домен/hostname в DNS). Дальше критерии те же.
 
-Evidence: `17-ldap-search.txt`.
+Сохраните вывод: `17-ldap-search.txt`.
 
-### 3. Change — SSSD на `cli`
+### 3. Изменение — SSSD на `cli`
 
 1. Пакеты `sssd` `sssd-ldap` (или `sssd-ipa`).
 2. `/etc/sssd/sssd.conf` (mode `0600`): domain, `ldap_uri`, search base, TLS по возможности (`ldap_tls_reqcert` для lab — документируйте insecure, если self-signed).
@@ -46,7 +46,7 @@ Evidence: `17-ldap-search.txt`.
 4. PAM: через `authselect` (Rocky/Alma) или `pam-auth-update` / пакетные профили (Debian/Ubuntu) — **не** правьте все файлы вручную без бэкапа.
 5. `systemctl enable --now sssd`.
 
-### 4. Verify — identity path
+### 4. Проверка — путь identity
 
 ```bash
 getent passwd alice
@@ -57,15 +57,15 @@ ssh alice@cli   # или alice@srv — как спроектировали
 
 Негатив: неизвестный `bob_not_exist` → отказ.
 
-Evidence: `17-getent.txt`, `17-ssh-alice.txt`.
+Сохраните выводы: `17-getent.txt`, `17-ssh-alice.txt`.
 
-### 5. Change — sudo / groups
+### 5. Изменение — sudo / groups
 
 1. Доменную группу в `sudoers.d` **или** `ldap_sudo` / IPA HBAC+sudo (если IPA).
-2. Проверка: `sudo -l -U alice` и одна безопасная команда.
+2. Проверьте: `sudo -l -U alice` и одна безопасная команда.
 3. Негатив: пользователь вне группы — sudo отказан (если так задумано).
 
-### 6. Verify — break-glass + LDAP outage
+### 6. Проверка — break-glass + отказ LDAP
 
 1. Убедитесь: локальный `labadmin` (или аналог) входит по ключу и имеет sudo **без** LDAP.
 2. Остановите slapd/ipa на `srv` (или firewall drop 389 с cli).
@@ -74,7 +74,7 @@ Evidence: `17-getent.txt`, `17-ssh-alice.txt`.
 
 `17-break-glass.md` — хронология.
 
-### 7. Automate
+### 7. Автоматизация
 
 `/usr/local/bin/lab-identity-smoke.sh` на `cli`:
 
@@ -82,13 +82,13 @@ Evidence: `17-getent.txt`, `17-ssh-alice.txt`.
 - `systemctl is-active sssd`;
 - exit 1 иначе.
 
-### 8. Document
+### 8. Документ
 
-Топология DN/URI, кто клиент, TLS-статус, break-glass процедура, долги (нет реплики, нет MFA).
+Топология DN/URI, кто клиент, TLS-статус, процедура break-glass, долги (нет реплики, нет MFA).
 
 ## Критерии приёмки
 
-- [ ] Каталог отвечает; `ldapsearch`/`ipa` evidence есть
+- [ ] Каталог отвечает; вывод `ldapsearch`/`ipa` есть
 - [ ] SSSD на клиенте; `getent` видит доменного user
 - [ ] SSH доменным user работает
 - [ ] sudo/groups согласованы и проверены

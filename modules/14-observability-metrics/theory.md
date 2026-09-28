@@ -1,4 +1,4 @@
-# Теория — metrics и alerts
+# Теория — метрики и алерты
 
 ## Модель
 
@@ -28,4 +28,4 @@ cli  --pull-->   Prometheus  --rules-->  Alertmanager (опционально) /
 
 ## Связь с 09
 
-journald/health-check остаются для локального runbook; капстоун требует именно metrics+alerts evidence.
+journald/health-check остаются для локального runbook. Капстоун требует именно пакет доказательств по metrics+alerts.

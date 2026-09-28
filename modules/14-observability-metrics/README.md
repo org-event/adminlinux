@@ -1,4 +1,4 @@
-# Модуль 14 — Observability: metrics + alerts
+# Модуль 14 — Observability: метрики и алерты
 
 **Цель:** поднять метрики хоста/службы (node_exporter + Prometheus lite или реалистичный аналог на 2 ВМ), алерты disk/service/HTTP и alert drill.
 

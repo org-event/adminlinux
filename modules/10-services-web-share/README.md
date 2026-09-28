@@ -1,6 +1,6 @@
 # Модуль 10 — Службы: веб, TLS и обмен файлами
 
-**Цель:** поднять nginx с **HTTPS (must)**, NFS в lab-сеть, согласовать firewall, проверить с `cli`.
+**Цель:** поднять nginx с **HTTPS (обязательно)**, NFS в lab-сеть, согласовать firewall, проверить с `cli`.
 
 **Время:** 4–6 часов  
 **Зависит от:** 07–09  
@@ -10,4 +10,4 @@
 |------|------------|
 | [theory.md](theory.md) | nginx, TLS, NFS, минимальная экспозиция |
 | [lab.md](lab.md) | HTTPS + NFS + негативы |
-| [checklist.md](checklist.md) | Самопроверка |
+| [checklist.md](checklist.md) | самопроверка |

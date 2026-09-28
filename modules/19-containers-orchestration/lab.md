@@ -2,7 +2,7 @@
 
 ## Цель
 
-Запустить контейнерный веб с volume и publish, оформить автостарт (systemd/quadlet или compose), поднять kind **или** k3s **или** minikube и применить один манифест Deployment+Service с probes.
+Запустите контейнерный веб с volume и publish, оформите автостарт (systemd/quadlet или compose), поднимите kind **или** k3s **или** minikube и примените один манифест Deployment+Service с probes.
 
 ## Окружение
 
@@ -15,7 +15,7 @@
 
 ## Задания
 
-### 1. Inspect
+### 1. Осмотр
 
 ```bash
 which podman docker nerdctl 2>/dev/null
@@ -25,17 +25,17 @@ free -h; df -h /
 
 Выберите runtime и зафиксируйте в `19-stack.md`.
 
-### 2. Change — контейнер на хосте
+### 2. Изменение — контейнер на хосте
 
 1. Запустите учебный HTTP (например `nginx` или `ghcr.io/...` лёгкий image):
    - `-p 8080:80`
    - volume с кастомным `index.html` → `/usr/share/nginx/html` (или аналог)
-2. Verify: `curl -s http://127.0.0.1:8080/` и с `cli` на IP `srv:8080`.
+2. Проверьте: `curl -s http://127.0.0.1:8080/` и с `cli` на IP `srv:8080`.
 3. Остановка/удаление контейнера **не** должна стереть volume-данные — проверьте.
 
-Evidence: `19-container-run.txt`.
+Сохраните вывод: `19-container-run.txt`.
 
-### 3. Change — автостарт
+### 3. Изменение — автостарт
 
 Один вариант:
 
@@ -44,7 +44,7 @@ Evidence: `19-container-run.txt`.
 
 Reboot *или* `systemctl restart <unit>` → снова `curl` 200.
 
-### 4. Change — k8s lite cluster
+### 4. Изменение — k8s lite cluster
 
 | Выбор | Короткий путь |
 |-------|----------------|
@@ -52,9 +52,9 @@ Reboot *или* `systemctl restart <unit>` → снова `curl` 200.
 | kind | `kind create cluster`; kubectl context kind |
 | minikube | `minikube start --driver=docker|podman` |
 
-`kubectl get nodes` → Ready. Evidence: `19-nodes.txt`.
+`kubectl get nodes` → Ready. Сохраните вывод: `19-nodes.txt`.
 
-### 5. Change — манифест Deploy+Service+probes
+### 5. Изменение — манифест Deploy+Service+probes
 
 Один файл `~/lab-notes/19-app.yaml` (или два):
 
@@ -69,18 +69,18 @@ kubectl rollout status deploy/...
 kubectl get pods,svc -o wide
 ```
 
-Verify:
+Проверьте:
 
 - `kubectl describe pod` показывает probes;
 - доступ с `cli` через NodePort **или** `kubectl port-forward` + curl (зафиксируйте способ).
 
 Негатив (кратко): сломайте readiness (неверный path) → Endpoints пустые / не Ready — затем почините.
 
-### 6. Automate
+### 6. Автоматизация
 
 `lab-k8s-smoke.sh`: `kubectl get deploy` Available; `curl` к сервису; exit 1 иначе.
 
-### 7. Document
+### 7. Документ
 
 Что на хосте vs в кластере; куда делись логи (`kubectl logs` / journal); ресурсные лимиты как долг; почему это не прод-HA.
 

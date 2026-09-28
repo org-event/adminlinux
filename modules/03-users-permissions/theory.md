@@ -2,7 +2,7 @@
 
 ## Модель
 
-Владелец / группа / other + (опционально) ACL. SGID на каталоге наследует группу для новых файлов. Sticky (`+t`) — нельзя удалить чужой файл в общем tmp.
+Владелец / группа / other + (по желанию) ACL. SGID на каталоге наследует группу для новых файлов. Sticky (`+t`) — нельзя удалить чужой файл в общем tmp.
 
 ```bash
 chmod 2770 /srv/opslab          # SGID + rwx для group
@@ -13,7 +13,7 @@ getfacl file
 
 ## sudo
 
-Только `/etc/sudoers.d/` через `visudo -f` + `visudo -c`. Полный `ALL=(ALL) ALL` — долг, не норма mid+.
+Только `/etc/sudoers.d/` через `visudo -f` + `visudo -c`. Полный `ALL=(ALL) ALL` — долг, не норма на mid+.
 
 ## Учётки
 

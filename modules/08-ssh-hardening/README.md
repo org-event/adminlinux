@@ -10,5 +10,5 @@
 | Файл | Содержание |
 |------|------------|
 | [theory.md](theory.md) | ключи, sshd_config, fail2ban |
-| [lab.md](lab.md) | Hardening SSH пошагово |
-| [checklist.md](checklist.md) | Самопроверка |
+| [lab.md](lab.md) | hardening SSH пошагово |
+| [checklist.md](checklist.md) | самопроверка |

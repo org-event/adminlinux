@@ -1,18 +1,18 @@
 # Теория — капстоун mid+
 
-Капстоун собирает освоенное и добавляет одно осознанное усиление из эшелона:
+Капстоун собирает освоенное и добавляет одно осознанное усиление из модулей 16–20:
 
 - SSH hardening, пользователи, LVM, firewall;
-- **HTTPS** (не optional);
+- **HTTPS** (не по желанию);
 - NFS или обоснованная замена;
-- **metrics + alerts** (модуль 14);
-- стенд **поднят/сведён Ansible** (модуль 15) или playbooks apply + drift-заметки;
-- **off-host DR** + timed drill (модуль 11);
-- MAC в enforcing/enabled с понятным fix-путём (модуль 13);
-- handoff + **postmortem** мини-инцидента;
-- **эшелон (выбор):** HA ([18](../18-ha-reliability/)) **или** identity ([17](../17-identity-sssd/)) **или** containers/k8s lite ([19](../19-containers-orchestration/)); perf ([16](../16-performance-capacity/)) и advanced net ([20](../20-advanced-networking/)) — сильный should.
+- **метрики + алерты** (модуль 14);
+- стенд **поднят и сведён Ansible** (модуль 15) или playbooks apply + заметки о drift;
+- **DR на другой хост** + timed drill (модуль 11);
+- MAC в enforcing/enabled с понятным путём починки (модуль 13);
+- документ передачи смены (`HANDOFF.md`) + **postmortem** мини-инцидента;
+- **усиление на выбор:** HA ([18](../18-ha-reliability/)) **или** identity ([17](../17-identity-sssd/)) **или** containers/k8s lite ([19](../19-containers-orchestration/)); perf ([16](../16-performance-capacity/)) и advanced net ([20](../20-advanced-networking/)) — сильно желательно.
 
-## Handoff
+## Документ передачи смены (`HANDOFF.md`)
 
 1. Зачем сервер и топология (`srv`/`cli`)  
 2. Как войти (в т.ч. break-glass, если есть LDAP)  

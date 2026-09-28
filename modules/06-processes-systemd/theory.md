@@ -11,7 +11,9 @@ kill -TERM <pid>     # сначала мягко
 kill -KILL <pid>     # крайняя мера
 ```
 
-## systemd — менеджер служб и кучи всего
+Сначала мягкий сигнал. `SIGKILL` — когда процесс уже не отвечает на уговоры.
+
+## systemd — менеджер служб (и многого ещё)
 
 ```bash
 systemctl status ssh
@@ -28,6 +30,8 @@ journalctl -u ssh -n 50 --no-pager
 journalctl -b -p err --no-pager
 ```
 
+При сбое службы смотрите `systemctl status` и сразу `journalctl -u`.
+
 ## Unit-файл (идея)
 
 ```ini
@@ -43,9 +47,11 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 ```
 
-## Timers вместо классического cron (предпочтительно в systemd-мире)
+После любой правки unit — `daemon-reload`, иначе systemd читает старое.
 
-`service` + `timer` дают календарь запусков и единый journal.
+## Timers вместо классического cron
+
+В мире systemd пара `service` + `timer` удобнее: календарь запусков и один journal.
 
 Классический cron всё ещё встречается:
 

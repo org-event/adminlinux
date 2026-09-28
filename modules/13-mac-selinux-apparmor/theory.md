@@ -21,7 +21,7 @@ sudo restorecon -Rv /var/www/lab
 sudo semanage fcontext -a -t httpd_sys_content_t '/var/www/lab(/.*)?'
 ```
 
-`setenforce 0` — **только** краткий диагностический шаг с записью времени; финал лаборатории — снова **Enforcing** + рабочий сервис.
+`setenforce 0` — **только** краткий диагностический шаг с записью времени. Финал лаборатории — снова **Enforcing** и рабочий сервис. Не отключайте SELinux «навсегда».
 
 ## AppArmor — цикл фикса
 
@@ -37,4 +37,4 @@ sudo aa-complain /etc/apparmor.d/...   # временно для сбора
 
 ## Связь с модулем 10
 
-Нестандартные пути TLS (`/etc/nginx/ssl`), document root вне default, NFS — частые источники deny. Фиксите контекст/профиль, не выкидывайте MAC.
+Нестандартные пути TLS (`/etc/nginx/ssl`), document root вне default, NFS — частые источники deny. Чините контекст/профиль. Не выкидывайте MAC.

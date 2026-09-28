@@ -1,7 +1,7 @@
 # Чеклист — модуль 10
 
 - [ ] nginx -t / reload без сюрпризов
-- [ ] HTTPS must закрыт evidence с `cli`
+- [ ] HTTPS обязательно закрыт сохранённым выводом с `cli`
 - [ ] Firewall: 443 (+ NFS только lab)
 - [ ] NFS негативы и root_squash понятны
 - [ ] Мини-инцидент HTTP(S)≠NFS закрыт

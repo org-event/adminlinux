@@ -9,5 +9,5 @@
 | Файл | Содержание |
 |------|------------|
 | [theory.md](theory.md) | journald, retention, health-check |
-| [lab.md](lab.md) | Расследование + скрипт проверки |
-| [checklist.md](checklist.md) | Самопроверка |
+| [lab.md](lab.md) | расследование + скрипт проверки |
+| [checklist.md](checklist.md) | самопроверка |

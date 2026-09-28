@@ -12,6 +12,8 @@ journalctl -u ssh -f                   # follow
 journalctl -p err..alert -n 100
 ```
 
+Сначала фильтр по unit и времени — так быстрее, чем листать всё подряд.
+
 ## Диск и retention
 
 Журналы могут съесть диск:
@@ -20,6 +22,8 @@ journalctl -p err..alert -n 100
 journalctl --disk-usage
 sudo journalctl --vacuum-size=200M
 ```
+
+На проде агрессивный vacuum делайте осознанно. На учебном стенде — можно потренироваться с фиксацией «до/после».
 
 ## Минимальный мониторинг без «сложной платформы»
 

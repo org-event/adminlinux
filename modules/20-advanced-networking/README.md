@@ -1,6 +1,6 @@
 # Модуль 20 — Продвинутая сеть lab
 
-**Цель:** DNS-as-service (dnsmasq или Unbound), WireGuard srv↔cli, зоны firewall / политика egress.
+**Цель:** DNS как сервис lab (dnsmasq или Unbound), WireGuard srv↔cli, зоны firewall / политика egress.
 
 **Время:** 3–5 часов  
 **Зависит от:** 07, 08 (рекомендуется после 18, если VIP/имена уже нужны)  

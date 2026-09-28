@@ -1,6 +1,6 @@
 # Теория — DNS, WireGuard, зоны
 
-## DNS-as-service (lab)
+## DNS как сервис lab
 
 В модуле 07 клиент использовал чужой/провайдерский DNS. Здесь `srv` становится резолвером для lab:
 
@@ -21,13 +21,13 @@ srv wg0 10.66.0.1/24  <->  cli wg0 10.66.0.2/24
 
 Ключи: `wg genkey` / `pubkey`. AllowedIPs минимальны. Трафик management/SSH можно оставить на lab Ethernet; через WG гоняйте учебный сервис или DNS.
 
-## Firewall zones / egress
+## Зоны firewall / egress
 
 Идея: не плоский «всё разрешено в lab», а:
 
 - зона `lab` / `internal` — srv↔cli;
 - зона `vpn` — интерфейс `wg0`;
-- **egress control**: с `srv` наружу только DNS/HTTP(S) к репо **или** явный deny + исключения (учебный минимум).
+- **контроль egress**: с `srv` наружу только DNS/HTTP(S) к репо **или** явный deny + исключения (учебный минимум).
 
 Debian: nftables chains / policy; Ubuntu ufw — ограниченно для зон.  
 Rocky/Alma: **firewalld** zones (`trusted`, `internal`, `public`) + rich rules / policies.

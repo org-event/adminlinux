@@ -1,4 +1,4 @@
-# Лаборатория 14 — metrics + alert drill
+# Лаборатория 14 — метрики и alert drill
 
 ## Цель
 
@@ -8,11 +8,11 @@
 
 - `srv` + `cli`, lab-сеть, HTTPS из 10
 - RAM на `cli` ≥1.5 ГБ желательно
-- Firewall: разрешить scrape-порты **только** из lab (например `9100/tcp` с IP `cli`)
+- Firewall: разрешите scrape-порты **только** из lab (например `9100/tcp` с IP `cli`)
 
 ## Задания
 
-### 1. Inspect
+### 1. Осмотрите стенд
 
 ```bash
 # на srv и cli
@@ -21,21 +21,21 @@ free -h; ss -tulpn; ip -br a
 
 Выберите размещение: Prometheus на `cli` (рекомендуется), node_exporter на `srv`.
 
-### 2. Change — node_exporter на `srv`
+### 2. Поставьте — node_exporter на `srv`
 
 1. Установите из репо **или** official binary в `/opt/node_exporter`.
 2. systemd unit, enable --now.
 3. Слушать `0.0.0.0:9100` или lab IP; firewall — только `cli`.
 4. Локально: `curl -s http://127.0.0.1:9100/metrics | head`.
 
-### 3. Change — Prometheus lite на `cli`
+### 3. Поднимите — Prometheus lite на `cli`
 
 1. Установите Prometheus (пакет/binary).
 2. `scrape_configs`: job `node` → `srv:9100`.
 3. UI/API: `http://<cli>:9090/targets` — state **UP**.
-4. Evidence: screenshot не обязателен; `curl` API targets → `14-targets.json`.
+4. Пакет доказательств: screenshot не обязателен; `curl` API targets → `14-targets.json`.
 
-### 4. Change — alert rules (минимум 3)
+### 4. Добавьте — alert rules (минимум 3)
 
 Файл rules + `rule_files` в prometheus.yml:
 
@@ -47,19 +47,19 @@ free -h; ss -tulpn; ip -br a
 
 `promtool check rules` (если есть) или перезагрузка без ошибок в логе.
 
-### 5. Verify — alert drill (must)
+### 5. Проведите — alert drill (обязательно)
 
 1. Спровоцируйте **один** алерт (остановить node_exporter / заполнить учебный volume loop-файлом / сломать HTTP).
 2. Дождитесь **firing** (снизьте `for:` до 30s–1m для учёбы).
-3. Evidence: API `/api/v1/alerts` → `14-alert-firing.json`.
+3. Пакет доказательств: API `/api/v1/alerts` → `14-alert-firing.json`.
 4. Устраните причину → alert inactive/resolved → `14-alert-resolved.json`.
-5. Хронология в `14-alert-drill.md`.
+5. Хронология в `14-alert-drill.md`. Если не вышло — проверьте `for:` и что rule file реально загружен.
 
-### 6. Change — связь с health-check 09
+### 6. Свяжите с health-check 09
 
 В заметках: что ловит timer на srv vs что ловит Prometheus. Не удаляйте health-check — дополните ссылкой на alerts.
 
-### 7. Automate
+### 7. Автоматизируйте smoke
 
 `/usr/local/bin/lab-metrics-smoke.sh` (на cli или srv):
 
@@ -67,7 +67,7 @@ free -h; ss -tulpn; ip -br a
 - хотя бы одно rule file загружено;
 - exit 1 при DOWN.
 
-### 8. Document
+### 8. Задокументируйте
 
 Топология портов; кто скрейпит кого; пороги; ограничения (нет внешнего Alertmanager/Pager — долг).
 
@@ -76,7 +76,7 @@ free -h; ss -tulpn; ip -br a
 - [ ] node_exporter отдаёт metrics; порт не открыт «в мир»
 - [ ] Prometheus видит target UP
 - [ ] ≥3 alert rules (disk, service/target, HTTP)
-- [ ] Alert drill: firing → resolve с JSON evidence
+- [ ] Alert drill: firing → resolve, JSON сохранён в заметках
 - [ ] Smoke-скрипт зелёный
 - [ ] Заметки связывают модуль 09 и 14
 

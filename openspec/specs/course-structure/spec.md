@@ -2,8 +2,7 @@
 
 ## Purpose
 
-Определяет структуру последовательного практического mid+ курса по администрированию Linux:
-порядок модулей, обязательный состав каждого модуля, язык материалов и требования к безопасной лаборатории.
+Описывает структуру практического mid+ курса по Linux: порядок модулей, состав каждого модуля, язык материалов и требования к безопасной лаборатории.
 
 ## Requirements
 
@@ -19,13 +18,13 @@
 
 ### Requirement: Mid-plus scope
 
-Курс SHALL позиционироваться как mid+ с эшелоном после MVP: сжатый bootstrap 01–04; обязательные блоки TLS, MAC, metrics/alerts, Ansible IaC и off-host DR; затем модули 16–20 (perf, identity, HA, containers, advanced net) до капстоуна.
+Курс SHALL позиционироваться как mid+ с эшелоном после MVP: сжатый bootstrap 01–04; обязательные блоки TLS, MAC, метрики/алерты, Ansible IaC и DR на другой хост; затем модули 16–20 (perf, identity, HA, контейнеры, продвинутая сеть) до капстоуна.
 
 #### Scenario: Capstone prerequisites
 
 - **GIVEN** обучающийся готов сдавать модуль 12
 - **WHEN** сверяется с syllabus
-- **THEN** видит зависимости от модулей 13–20 и must-критерии TLS, metrics, Ansible, DR, postmortem, плюс усиление HA или identity или containers
+- **THEN** видит зависимости от модулей 13–20 и обязательные критерии TLS, метрики, Ansible, DR, postmortem, плюс усиление HA или identity или containers
 
 ### Requirement: Post-MVP echelon modules
 
@@ -35,7 +34,7 @@
 
 - **GIVEN** каталог `modules/16-performance-capacity/` (и аналоги 17–20)
 - **WHEN** модуль считается готовым
-- **THEN** в нём есть `README.md`, `theory.md`, `lab.md` и `checklist.md` на русском с циклом Inspect→Change→Verify→Document→Automate
+- **THEN** в нём есть `README.md`, `theory.md`, `lab.md` и `checklist.md` на русском с циклом осмотр → изменение → проверка → запись → автоматизация
 
 ### Requirement: Module contents
 

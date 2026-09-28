@@ -1,4 +1,4 @@
-# Лаборатория 11 — off-host DR
+# Лаборатория 11 — DR на другой хост
 
 ## Цель
 
@@ -12,16 +12,16 @@
 
 ## Задания
 
-### 1. Inspect — scope + политика чисел
+### 1. Разведка — scope и политика числами
 
-`~/lab-notes/11-scope.txt` — что бэкапим (nginx+ssl, exports, sudoers.d lab, `/var/www/lab`, NFS share, lab units, манифест пакетов).
+Сделайте `~/lab-notes/11-scope.txt` — что бэкапите (nginx+ssl, exports, sudoers.d lab, `/var/www/lab`, NFS share, lab units, манифест пакетов).
 
 В `11.md` **обязательно числа**:
 
 - RPO lab = **≤ 60 мин** (или жёстче, если timer чаще)
 - RTO lab = **≤ 30 мин** на восстановление каталога сайта/share и проверку `curl -k https://…`
 
-### 2. Change — второй target
+### 2. Настройте — второй target
 
 Выберите и зафиксируйте в inventory:
 
@@ -32,45 +32,45 @@
 
 Локальный `/srv/data/backups/` можно как staging, но **итоговая копия** должна оказаться на втором target.
 
-### 3. Change — `/usr/local/bin/lab-backup.sh`
+### 3. Напишите — `/usr/local/bin/lab-backup.sh`
 
 Требования: `set -euo pipefail`; датированный каталог; rsync/tar; манифест пакетов; лог `/var/log/lab-backup.log`; ротация N=5 на target; `--dry-run`; ненулевой exit при ошибке; после копирования — `MANIFEST.sha256`.
 
-### 4. Verify — dry-run и прогон
+### 4. Проверьте — dry-run и прогон
 
-Evidence: dry-run, успешный run, `ls` на **обоих** местах (staging и off-host).
+Пакет доказательств: dry-run, успешный run, `ls` на **обоих** местах (staging и копия на другой хост).
 
-### 5. Change — timer
+### 5. Подключите — timer
 
 `lab-backup.service` + `lab-backup.timer` (учебно каждые 30–60 мин; в заметках — prod nightly + offsite).  
 `systemctl list-timers | grep lab-backup`.
 
-### 6. Verify — restore файла и каталога
+### 6. Проверьте — restore файла и каталога
 
-Классическое удаление тестового файла/каталога → restore из off-host → `sha256sum -c`. Негатив: несуществующий timestamp → явная ошибка.
+Сделайте классическое удаление тестового файла/каталога → restore с другого хоста → `sha256sum -c`. Негатив: несуществующий timestamp → явная ошибка. Если не вышло — смотрите права на target и путь в манифесте.
 
-### 7. Verify — timed restore drill (must)
+### 7. Проверьте — timed restore drill (обязательно)
 
 1. Подготовьте сценарий: «пропал `/var/www/lab`».
 2. Засеките время от старта восстановления до `curl -k https://127.0.0.1/` OK.
 3. Запишите в `~/lab-notes/11-restore-drill.md`: wall-clock минуты/секунды, уложились ли в RTO, что тормозит.
 4. Если не уложились — одна итерация улучшения (скрипт `lab-restore-www.sh` или runbook) и повтор замера.
 
-### 8. Verify — инъекция сбоя
+### 8. Проверьте — инъекция сбоя
 
 Несуществующий source → ненулевой код + строка в логе → откат.
 
-### 9. Automate — report
+### 9. Автоматизируйте — report
 
-`/usr/local/bin/lab-backup-report.sh`: список копий на off-host, размер, возраст; если старше RPO — exit 1.
+`/usr/local/bin/lab-backup-report.sh`: список копий на другом хосте, размер, возраст; если старше RPO — exit 1.
 
-### 10. Document
+### 10. Задокументируйте
 
 Политика: что / куда (два target) / частота / RPO / RTO / как проверить / ограничения (нет географического offsite — долг).
 
 ## Критерии приёмки
 
-- [ ] Off-host target реально получает копии
+- [ ] Второй target реально получает копии
 - [ ] Скрипт + dry-run + ротация + MANIFEST
 - [ ] Timer активен; RPO числом согласован с расписанием
 - [ ] Restore файла и каталога доказаны
@@ -88,4 +88,4 @@ SSH на `cli`: отдельный ключ, пользователь `backup` �
 
 ## Очистка
 
-Оставьте скрипт, timer, ≥1 off-host копию для капстоуна.
+Оставьте скрипт, timer, ≥1 копию на другом хосте для капстоуна.

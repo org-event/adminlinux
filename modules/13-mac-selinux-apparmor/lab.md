@@ -2,7 +2,7 @@
 
 ## Цель
 
-Воспроизвести MAC-отказ на учебной службе (nginx и/или кастомный путь), снять evidence из логов и устранить **правильным** контролом; финал — MAC включён.
+Воспроизвести MAC-отказ на учебной службе (nginx и/или кастомный путь), снять пакет доказательств из логов и устранить **правильным** контролом. Финал — MAC включён.
 
 ## Окружение
 
@@ -12,7 +12,7 @@
 
 ## Задания
 
-### 1. Inspect — baseline
+### 1. Снимите baseline
 
 **Rocky/Alma:**
 
@@ -31,7 +31,7 @@ sudo journalctl -b --no-pager | grep -i apparmor | tail -30 || true
 
 Сохраните baseline в `~/lab-notes/13-baseline.txt`. В `13.md` — одна страница: чем SELinux отличается от AppArmor на уровне модели.
 
-### 2. Change — спровоцировать отказ
+### 2. Спровоцируйте отказ
 
 Выберите **один** сценарий (или эквивалент с тем же циклом):
 
@@ -43,15 +43,15 @@ sudo journalctl -b --no-pager | grep -i apparmor | tail -30 || true
 
 Зафиксируйте симптомы: HTTP 403/500, journal ошибки, клиентский curl.
 
-**Запрещено** как финал: `SELINUX=disabled`, `setenforce 0` оставить, purge AppArmor.
+**Запрещено** как финал: `SELINUX=disabled`, оставить `setenforce 0`, purge AppArmor. Не отключайте SELinux «навсегда».
 
-### 3. Verify — снять AVC / AppArmor DENIED
+### 3. Снимите AVC / AppArmor DENIED
 
-Evidence в `13-avc.txt` / `13-apparmor-deny.txt`: timestamp, процесс, denied operation, путь/порт.
+Пакет доказательств в `13-avc.txt` / `13-apparmor-deny.txt`: timestamp, процесс, denied operation, путь/порт.
 
-Краткий Permissive/complain **допустим** на время сбора (запишите `date -Is` вкл/выкл), затем верните enforce.
+Краткий Permissive/complain **допустим** на время сбора (запишите `date -Is` вкл/выкл). Затем верните enforce.
 
-### 4. Change — fix
+### 4. Исправьте правильно
 
 | SELinux | AppArmor |
 |---------|----------|
@@ -59,23 +59,23 @@ Evidence в `13-avc.txt` / `13-apparmor-deny.txt`: timestamp, процесс, de
 | `setsebool -P …` | tune профиля, не disable |
 | перезапуск службы | `apparmor_parser -r`, restart |
 
-Покажите: сервис работает **и** MAC снова enforcing/enabled.
+Проверьте: сервис работает **и** MAC снова enforcing/enabled. Если не вышло — перечитайте AVC: часто хватает `restorecon` или одного boolean.
 
-### 5. Verify — негатив регрессии
+### 5. Повторите цикл регрессии
 
-Повторно сломайте контекст/профиль осознанно (или уберие boolean) → снова deny → снова fix. Второй цикл короче, но evidence обязателен.
+Снова сломайте контекст/профиль осознанно (или уберите boolean) → снова deny → снова fix. Второй цикл короче, но пакет доказательств обязателен.
 
-### 6. Automate
+### 6. Автоматизируйте статус
 
 `/usr/local/bin/lab-mac-status.sh`:
 
 - SELinux: печатает getenforce; exit 1 если не Enforcing
 - AppArmor: `aa-status --enabled` / нет «dead»; exit 1 если подсистема выключена
-- Опционально: `curl -sk -o /dev / https://127.0.0.1/` 
+- Опционально: `curl -sk -o /dev/null https://127.0.0.1/` 
 
-### 7. Document
+### 7. Задокументируйте
 
-Runbook в `13.md`: симптомы → какие логи → допустимые фиксы → что запрещено. Ссылка из handoff капстоуна.
+Runbook в `13.md`: симптомы → какие логи → допустимые фиксы → что запрещено. Ссылка из документа передачи смены (`HANDOFF.md`) капстоуна.
 
 ## Критерии приёмки
 
@@ -92,7 +92,7 @@ Runbook в `13.md`: симптомы → какие логи → допусти�
 |--|------------|---------------|
 | Статус | `getenforce` | `aa-status` |
 | Пакеты помощи | `setroubleshoot`, `policycoreutils-python-utils` | `apparmor-utils` |
-| Частый nginx | `httpd_sys_content_t`, booleans | профиль `/etc/apparmor.d/nginx` или synlinks |
+| Частый nginx | `httpd_sys_content_t`, booleans | профиль `/etc/apparmor.d/nginx` или symlinks |
 
 ## Очистка
 

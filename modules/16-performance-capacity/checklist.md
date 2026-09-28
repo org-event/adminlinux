@@ -1,7 +1,7 @@
 # Чеклист — модуль 16
 
-- [ ] Понимаю разницу load vs pressure / bottleneck
-- [ ] Baseline + nominal + degrade evidence есть
-- [ ] Пороги и capacity notes для *своего* стенда
+- [ ] Понимаю разницу нагрузка vs давление / bottleneck
+- [ ] Baseline + nominal + выводы по деградации есть в `~/lab-notes/`
+- [ ] Пороги и заметки по ёмкости для *своего* стенда
 - [ ] Snapshot-скрипт запускается
 - [ ] Критерии lab закрыты
