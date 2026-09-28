@@ -1,137 +1,114 @@
-# Лаборатория 12 — капстоун
+# Лаборатория 12 — капстоун mid+
 
 ## Цель
 
-Привести `srv` к воспроизводимому состоянию «учебный прод», закрыть gap-list, пережить мини-инцидент и сдать handoff с пакетом доказательств.
+Привести стенд к воспроизводимому mid+ состоянию, пережить инцидент с postmortem и сдать handoff с evidence pack.
 
 ## Окружение
 
-- Чистый снимок **или** приведённый в порядок стенд после модулей 01–11
-- ВМ `cli` для внешних проверок
+- Стенд после модулей 01–11 и **13–15**
+- `cli` для acceptance, DR, Prometheus
 - Снимок `capstone-final` в конце
-- Консоль гипервизора доступна
 
 ## Задания
 
-Единый сценарий: разверните и опишите сервер со свойствами ниже.
+### Обязательный объём (must)
 
-### Обязательный объём
+1. **Идентичность:** hostname, inventory.  
+2. **SSH:** ключ only, без root/password login.  
+3. **Роли:** оператор + opslab/данные.  
+4. **LVM** данные + автомонтирование.  
+5. **Firewall** минимален, каждое правило обосновано.  
+6. **HTTPS:** nginx + TLS, проверка с `cli` (`curl -vk https://…`).  
+7. **NFS** в lab-сеть **или** раздел «почему без» с компенсирующим контролем.  
+8. **MAC:** SELinux enforcing или AppArmor enabled; нет «отключено навсегда».  
+9. **Metrics + alerts:** exporter + Prometheus (или зафиксированный аналог модуля 14); алерты disk/service/HTTP; evidence срабатывания.  
+10. **Ansible-built:** inventory srv+cli; ключевые роли (packages/users/sshd/firewall/nginx+tls/timer) применены playbooks; есть `check` evidence и заметка о handlers.  
+11. **DR:** off-host копия + timed restore drill с числами RPO/RTO.  
+12. **Health/logs:** timer health-check не отменяет пункт 9.  
+13. **HANDOFF.md** + **12-postmortem.md**.  
+14. **Evidence pack** `~/lab-notes/12-evidence/`.
 
-1. **Идентичность:** hostname, актуальный inventory.
-2. **Доступ:** SSH по ключу, root login запрещён, парольный SSH выключен.
-3. **Пользователи:** минимум две роли (оператор + пользователь данных/`opslab`).
-4. **Хранилище:** отдельный том данных (LVM), автомонтирование.
-5. **Firewall:** только нужные порты/сервисы; каждое правило обосновано.
-6. **HTTP:** nginx — страница статуса (hostname, дата, версия ОС).
-7. **Обмен:** NFS только в lab-сеть **или** замена с обоснованием в handoff.
-8. **Наблюдаемость:** health-check по timer + понятные логи.
-9. **Бэкап:** скрипт + timer + доказанное восстановление одного файла.
-10. **Handoff:** `~/lab-notes/HANDOFF.md` (или копия в `course-artifacts/`).
+«HTTPS optional» / «Ansible optional» — **не** уровень сдачи.
 
-### Дополнительно (на выбор)
+### Порядок работы
 
-- fail2ban для ssh
-- HTTPS с самоподписанным сертификатом (с предупреждением)
-- второй virtual host
-- Ansible-плейбук «с нуля» (не обязательно)
+#### A. Inspect — gap-list
 
-## Порядок работы
+`12-gap-list.md` по must-пунктам. Снимок `12-before/` (`ss`, `findmnt`, firewall, timers, `getenforce`/`aa-status`, `curl -k https`, prometheus targets).
 
-### A. Inspect — gap-list
+#### B. Change — закрытие gaps
 
-1. Пройдитесь по обязательному объёму пункт за пунктом.
-2. Создайте `~/lab-notes/12-gap-list.md`: что уже есть / чего нет / риск.
-3. Сохраните снимок состояния: `~/lab-notes/12-before/` (`ip`, `ss`, `findmnt`, `ufw`/`firewall-cmd`, `systemctl list-timers`).
+По одному; после Ansible-правок — `check` + apply. Не переписывайте стенд вручную в обход playbooks без записи drift.
 
-### B. Change — закрытие пробелов
+#### C. Verify — acceptance с `cli`
 
-Закрывайте gaps **по одному**, после каждого — короткий verify. Не переписывайте стенд без причины.
-
-### C. Verify — внешний приёмочный прогон с `cli`
-
-С `cli` выполните и сохраните в `~/lab-notes/12-acceptance.txt`:
+Сохраните `12-acceptance.txt`:
 
 ```bash
 ping -c 2 <IP-srv>
 nc -vz <IP-srv> 22
-nc -vz <IP-srv> 80
-ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no user@<IP-srv>   # отказ
-ssh -i ~/.ssh/id_ed25519_lab user@<IP-srv> 'hostname; findmnt /srv/data; curl -s localhost | head'
-curl -s http://<IP-srv>/ | head
-# NFS: mount + ls + touch файла (если в объёме)
+nc -vz <IP-srv> 443
+ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no user@<IP-srv>  # отказ
+ssh … 'hostname; findmnt /srv/data; curl -sk https://127.0.0.1/ | head'
+curl -vk https://<IP-srv>/ 2>&1 | head -40
+# NFS mount при наличии
+# Prometheus: target srv UP; один alert rule виден
 ```
 
-### D. Change — мини-инцидент (обязательно)
+#### D. Change — мини-инцидент + postmortem
 
-Выберите **один** сценарий, воспроизведите, устраните, опишите в `~/lab-notes/12-incident.md`:
+Один сценарий (воспроизвести → устранить → postmortem):
 
-| # | Инцидент | Ожидаемый путь расследования |
-|---|----------|------------------------------|
-| 1 | Сломан UUID в fstab для `/srv/data` | mount -a / boot, blkid, откат |
-| 2 | Случайно убрали allow SSH в firewall | консоль, restore rule |
-| 3 | Упал nginx / опечатка в конфиге | `nginx -t`, journal, rollback |
-| 4 | Health-check красный из-за 100% `/srv/data` | df, очистка, подтверждение OK |
-| 5 | Бэкап не бежал N часов | timer status, journal, ручной запуск |
+| # | Инцидент |
+|---|----------|
+| 1 | Сломан fstab UUID для данных |
+| 2 | Убран allow SSH в firewall |
+| 3 | Сломан nginx TLS/конфиг |
+| 4 | Алерт disk/service — довести до firing и погасить |
+| 5 | Off-host бэкап просрочен > RPO |
 
-После устранения — повторный короткий acceptance с `cli`.
+`12-incident.md` (хронология) + `12-postmortem.md` (структура из theory).
 
-### E. Automate — пакет доказательств (evidence pack)
+#### E. Automate — evidence pack
 
-Соберите каталог `~/lab-notes/12-evidence/`:
+`12-evidence/`: inventory, sshd hardening, firewall, findmnt, tls-curl, nfs/exports или rationale, mac-status, prometheus-targets, alert-drill, ansible-check-apply, backup-restore-drill (RPO/RTO), timers, incident, postmortem.
 
-- `inventory.md`
-- `sshd-T-hardening.txt`
-- `firewall-rules.txt`
-- `findmnt-lsblk.txt`
-- `curl-http.txt`
-- `nfs-exportfs.txt` (или rationale без NFS)
-- `healthcheck-log-tail.txt`
-- `backup-restore-notes.md`
-- `timers.txt`
-- `incident.md` (копия)
+Опционально `lab-capstone-gather.sh`.
 
-Опционально скрипт `/usr/local/bin/lab-capstone-gather.sh`, который собирает эти файлы одной командой.
+#### F. Document — HANDOFF
 
-### F. Document — HANDOFF
+Ответы на вопросы theory + ссылки на playbooks и alert rules.
 
-`~/lab-notes/HANDOFF.md` должен отвечать минимум на:
+#### G. Финал
 
-1. Для чего сервер и какая топология?
-2. Как войти (кто, ключ, куда)?
-3. Какие сервисы критичны и как проверить?
-4. Где данные и как смонтированы?
-5. Политика firewall (таблица правил)?
-6. Как устроен бэкап и как восстановить файл?
-7. Что делать при потере SSH?
-8. Известные ограничения / долги
+Снимок `capstone-final`.
 
-### G. Финал
-
-Снимок гипервизора `capstone-final`.
-
-## Критерии приёмки (рубрика)
+## Критерии приёмки (рубрика mid+)
 
 | Критерий | Вес | Доказательство |
 |----------|-----|----------------|
-| SSH hardened | must | негативный тест пароля + вход ключом |
-| HTTP доступен с cli | must | `curl` вывод |
-| Данные на LVM | must | `findmnt`, `lsblk` |
-| Firewall минимален | must | list rules + обоснование |
-| Health-check жив | must | log/timer |
-| Backup + restore | must | заметка восстановления |
-| Мини-инцидент закрыт | must | `12-incident.md` + повторный verify |
+| SSH hardened | must | отказ пароля + вход ключом |
+| HTTPS с cli | must | `curl -vk` / openssl |
+| LVM данные | must | findmnt, lsblk |
+| Firewall минимален | must | rules + обоснование |
+| MAC не выключен | must | getenforce / aa-status |
+| Metrics + alerts | must | target UP + alert drill |
+| Ansible-built | must | playbooks + check/apply evidence |
+| Off-host DR + RPO/RTO | must | drill notes с числами |
+| Мини-инцидент | must | incident + повторный acceptance |
+| Postmortem | must | `12-postmortem.md` |
 | Evidence pack | must | каталог `12-evidence/` |
-| HANDOFF полный | must | ответы на вопросы выше |
-| NFS или эквивалент | must | mount с cli или раздел «почему без» |
-| Gap-list закрыт | should | `12-gap-list.md` |
-| Чистота заметок | should | inventory актуален |
+| HANDOFF | must | полные ответы |
+| NFS или эквивалент | must | mount или rationale |
+| Gap-list | should | закрыт |
 
 ## Подсказки
 
-- Капстоун оценивает операторскую дисциплину сильнее «красоты» конфигов.
-- Если ломается — runbook модулей 07–08.
-- Не оставляйте в handoff тайные пароли; только способ получения доступа к ключам/консоли.
+- Оценивается дисциплина оператора, не «красота» HTML.
+- Drift вручную после Ansible — долг в handoff.
+- Не светите учебные пароли в публичных копиях handoff.
 
 ## Очистка
 
-Стенд сохраните — это портфолио-доказательство навыка.
+Стенд сохраните как портфолио.

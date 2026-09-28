@@ -1,102 +1,69 @@
-# Лаборатория 01 — окружение и основы
+# Лаборатория 01 — инвентарь стенда
 
 ## Цель
 
-Поднять ВМ `srv`, зафиксировать инвентарь, научиться собирать факты о системе и отличать учебный стенд от хоста разработчика.
+Поднять `srv`, сдать операторский паспорт и inventory без двусмысленности «на какой машине я».
 
 ## Окружение
 
 - ВМ по [lab-setup](../../course/lab-setup.md)
-- Каталог заметок `~/lab-notes/`
-- Снимок `clean-base` после выполнения
+- `~/lab-notes/`, снимок `clean-base` в конце
 
 ## Задания
 
-### 1. Inspect — паспорт системы
-
-Соберите и сохраните:
+### 1. Inspect — паспорт
 
 ```bash
-mkdir -p ~/lab-notes
+mkdir -p ~/lab-notes/bin
 {
-  echo "## Паспорт srv"
-  date -Is
-  cat /etc/os-release
-  hostnamectl
-  uname -r
-  free -h
-  df -hT
-  lsblk
-  ip -br a
-  whoami
-  id
+  echo "## passport srv"; date -Is
+  cat /etc/os-release; hostnamectl; uname -r
+  free -h; df -hT; lsblk; ip -br a; id
+  systemctl is-system-running || true
 } | tee ~/lab-notes/01-passport.txt
 ```
 
-### 2. Change — hostname и inventory
+### 2. Change — идентичность
 
-1. Задайте hostname `srv.lab.local` (если ещё не задан).
-2. Создайте `~/lab-notes/inventory.md` с полями: hostname, IP, дистрибутив, пользователь, дата снимка, hypervisor (VirtualBox/VMware/KVM/другое).
+1. Hostname `srv.lab.local`.
+2. `~/lab-notes/inventory.md`: hostname, IP (NAT + lab), семья дистрибутива, пользователь, hypervisor, дата снимка, план второй ВМ `cli`.
 
-### 3. Verify — FHS и man
+### 3. Verify — dual-distro ментальная модель
 
-1. Покажите содержимое `/etc`, `/var/log`, `/home` (только список).
-2. Откройте `man hier` / `man 7 hier` либо опишите `/etc` и `/var` своими словами.
-3. Найдите man для `sudo` и выпишите один важный флаг.
-4. Сравните `man ls` и `ls --help` — в заметках: когда что удобнее.
+В `~/lab-notes/01.md` таблица (5–7 строк): пакеты / firewall / MAC / типичный лог-путь / «как обновить систему» — для **вашей** семьи и кратко для **другой**.
 
-### 4. Inspect — кто ещё в системе
-
-```bash
-who
-w
-last -n 5 2>/dev/null || lastlog 2>/dev/null | head
-```
-
-Сохраните вывод в `~/lab-notes/01-sessions.txt`. На учебной ВМ часто один пользователь — это нормально; важно уметь проверить.
-
-### 5. Verify — пакетный менеджер «жив»
-
-Без установки лишнего — только проверка:
+Проверка пакетного менеджера (без лишних установок):
 
 | Семья | Команда |
 |-------|---------|
-| Debian/Ubuntu | `sudo apt update` (успех индексов) |
-| Rocky/Alma | `sudo dnf check-update` или `dnf repolist` |
+| Debian/Ubuntu | `sudo apt update` |
+| Rocky/Alma | `sudo dnf repolist` |
 
-Зафиксируйте в паспорт: семья дистрибутива и факт доступа в интернет (NAT).
+### 4. Verify — негатив «не тот хост»
 
-### 6. Verify — негативный тест «не тот хост»
+Чеклист из ≥4 пунктов в `01.md` (hostname, IP/интерфейсы, отсутствие личных данных в `/home`, снимок/метка ВМ). Выполните чеклист и отметьте результат.
 
-1. Выведите `hostname` и IP.
-2. В `~/lab-notes/01.md` напишите чеклист из 3 пунктов: «как убедиться, что я не на рабочем ноутбуке» (hostname, IP/интерфейсы, отсутствие личных данных в `/home`).
+### 5. Automate
 
-### 7. Automate — повторный сбор паспорта
+`~/lab-notes/bin/collect-passport.sh` — пересобирает `01-passport.txt` (timestamp обновляется). Два запуска подряд — в evidence.
 
-Скрипт `~/lab-notes/bin/collect-passport.sh`, который перезаписывает/дописывает `01-passport.txt`. Запустите дважды; второй запуск должен обновить timestamp.
+### 6. Document
 
-### 8. Document
-
-В `~/lab-notes/01.md`:
-
-- Чем ваш дистрибутив отличается от «просто Linux»?
-- Почему практикуем не на хосте разработчика?
-- Что войдёт в снимок `clean-base`?
+В `01.md`: что войдёт в `clean-base`; зачем вторая ВМ в mid+ (проверка снаружи, DR-target, metrics).
 
 ## Критерии приёмки
 
-- [ ] Есть паспорт с os-release, RAM, дисками, IP
-- [ ] Hostname = `srv.lab.local`
-- [ ] Есть `inventory.md` и ответы Document
-- [ ] Проверен пакетный менеджер / сеть
-- [ ] Есть скрипт повторного сбора паспорта
-- [ ] Сделан снимок `clean-base`
+- [ ] Паспорт с os-release, RAM, дисками, IP, systemd state
+- [ ] Hostname `srv.lab.local`, актуальный `inventory.md`
+- [ ] Dual-distro таблица заполнена
+- [ ] Негатив «не тот хост» выполнен
+- [ ] Скрипт паспорта + снимок `clean-base`
 
 ## Подсказки
 
-- IP: `ip -br a`, не устаревший `ifconfig` (если его нет).
-- Если `hostnamectl` нет — редкость; проверьте, что это systemd-дистрибутив.
+- IP: `ip -br a`. Не полагайтесь на `ifconfig`.
+- Если нет интернета — NAT/DNS чините до модуля 04.
 
 ## Очистка
 
-Ничего откатывать не нужно. Сохраните снимок.
+Откатывать нечего. Сохраните снимок.

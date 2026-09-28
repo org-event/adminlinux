@@ -1,57 +1,25 @@
-# Теория — оболочка и текст
+# Теория — оболочка (mid)
 
-## Shell как инструмент админа
-
-Bash выполняет команды, связывает их конвейерами и сохраняет историю. Админ редко «кликает» — он фильтрует текст.
+## Операторский минимум
 
 ```bash
-pwd
-cd /var/log
-ls -la
-echo $HOME
-echo $?          # код возврата предыдущей команды
+echo $?                 # код возврата
+cmd >out 2>err          # разделение потоков
+cmd | other             # конвейер
+set -euo pipefail       # каркас скриптов (с модуля 11 — must)
 ```
 
-## Пути и glob
-
-| Пример | Смысл |
-|--------|-------|
-| `.` / `..` | текущий / родительский каталог |
-| `~` | домашний каталог |
-| `*.log` | маска имён |
-| `/var/log/syslog` | абсолютный путь |
-
-## Потоки и конвейеры
+## Инструменты triage
 
 ```bash
-command > out.txt     # stdout в файл (перезапись)
-command >> out.txt    # дописать
-command 2> err.txt    # stderr
-command | other       # конвейер
+grep -RInE 'error|fail|denied' /var/log 2>/dev/null | head
+journalctl -p err..alert -n 100 --no-pager
+awk -F: '$7 ~ /nologin|false/ {print $1}' /etc/passwd
+cut -d: -f1 /etc/passwd | sort
+find /var/log -type f -size +10M 2>/dev/null
+diff -u file.bak file
 ```
 
-## Текстовые инструменты
+## Безопасность
 
-```bash
-less /var/log/syslog          # или journalctl на современных системах
-grep -i error /var/log/*.log
-cut -d: -f1 /etc/passwd
-sort | uniq -c | sort -nr
-sed -n '1,20p' file
-awk -F: '{print $1,$7}' /etc/passwd
-```
-
-## История и помощь
-
-```bash
-history | tail -20
-Ctrl-R                 # поиск по истории (в интерактивном bash)
-type ls
-which python3
-```
-
-## Безопасные привычки
-
-- Перед `rm` сначала `ls` той же маской.
-- Не запускайте `rm -rf /` и аналоги; в лаборатории тоже тренируйте осторожность.
-- Для правок конфигов предпочитайте копию: `cp file file.bak.$(date +%F)`.
+Перед разрушающим действием — та же маска через `ls`/`find`. Конфиги править через `.bak.$(date +%F%H%M)`.

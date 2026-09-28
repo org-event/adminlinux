@@ -1,14 +1,12 @@
-# Лаборатория 10 — веб и NFS
+# Лаборатория 10 — nginx + TLS + NFS
 
 ## Цель
 
-Опубликовать учебный сайт и NFS-шару для lab-сети, согласовать firewall и отработать отказ доступа / неверный экспорт.
+HTTPS-сайт статуса с `cli`, NFS в lab-сеть, негативные тесты и мини-инцидент HTTP≠NFS.
 
 ## Окружение
 
-- `srv` + `cli` (настоятельно рекомендуется)
-- Firewall из модуля 07
-- Группа `opslab` из модуля 03 (создайте, если нет)
+- `srv` + `cli`, firewall из 07, группа `opslab` из 03
 - Снимок `before-services`
 
 ## Задания
@@ -16,104 +14,81 @@
 ### 1. Inspect
 
 ```bash
-ss -tulpn
+ss -tulpn; ip -br a
 systemctl is-active nginx 2>/dev/null || true
-df -h /srv /srv/data 2>/dev/null || df -h /srv
-ip -br a
 ```
 
-Запишите IP `srv` в lab-сети и подсеть для NFS-экспорта.
+Запишите IP `srv` в lab-сети и CIDR для `/etc/exports`.
 
-### 2. Change — nginx
+### 2. Change — nginx HTTP-контент
 
 1. Установите nginx.
-2. Контент в `/var/www/lab/index.html`: hostname, дата, краткий статус (можно генерировать скриптом).
-3. Server block на этот каталог (или аккуратная замена default).
-4. `sudo nginx -t` + reload.
-5. Локально: `curl -s http://127.0.0.1/` и с `cli`: `curl -s http://<IP-srv>/`.
+2. `/var/www/lab/index.html` — hostname, дата, ОС.
+3. Server block на этот root; `nginx -t` + reload.
+4. Локально и с `cli`: `curl -s http://…/`.
 
-| Семья | Установка |
-|-------|-----------|
-| Debian/Ubuntu | `sudo apt install nginx` |
-| Rocky/Alma | `sudo dnf install nginx` + часто `sudo systemctl enable --now nginx` |
+### 3. Change — TLS (must)
 
-### 3. Change — кастомная ошибка и негативный тест HTTP
+1. Каталог `/etc/nginx/ssl/` (права на key: root, `600`).
+2. Самоподписанный crt/key (CN=`srv.lab.local` или IP).
+3. `listen 443 ssl` + протоколы ≥ TLSv1.2.
+4. Либо `return 301 https://$host$request_uri` с `:80`, либо документированный dual-listen с приоритетом HTTPS в handoff.
+5. Firewall: `443/tcp` для lab (и/или нужной зоны).
 
-1. Создайте простую страницу 404 `/var/www/lab/404.html`.
-2. Настройте `error_page 404 /404.html` в server block.
-3. Запросите несуществующий URL с `cli` — убедитесь, что видите вашу 404.
-4. Остановите nginx, с `cli` повторите `curl`/`nc` — зафиксируйте отличие «firewall ок, сервиса нет».
+Проверка с `cli`:
 
-Снова запустите nginx.
-
-### 4. Change — NFS
-
-1. Каталог `/srv/data/nfs/share` (предпочтительно на LVM) или `/srv/nfs/share`.
-2. Права: группа `opslab`, запись для группы (например `2770`).
-3. Экспорт **только** в подсеть лаборатории (host-only), не `*`.
-4. Включите nfs-server, `exportfs -rav`, `exportfs -v`.
-5. На `cli` смонтируйте, создайте файл, увидьте на сервере.
-
-| Семья | Пакет | Сервис |
-|-------|-------|--------|
-| Debian/Ubuntu | `nfs-kernel-server` | `nfs-server` |
-| Rocky/Alma | `nfs-utils` | `nfs-server` |
-
-Пример идеи `/etc/exports` (подставьте свою сеть):
-
-```text
-/srv/data/nfs/share  10.0.10.0/24(rw,sync,no_subtree_check)
+```bash
+curl -vk https://<IP-srv>/ 2>&1 | tee ~/lab-notes/10-tls-curl.txt
+openssl s_client -connect <IP-srv>:443 -servername srv.lab.local </dev/null 2>/dev/null | openssl x509 -noout -subject -dates
 ```
 
-### 5. Verify — NFS негативные тесты
+### 4. Change — 404 и негатив «сервис down»
 
-1. С `cli` попробуйте смонтировать с **неверным** путём экспорта — зафиксируйте ошибку.
-2. Создайте пользователя/файл так, чтобы продемонстрировать влияние `root_squash` (root на клиенте ≠ root на сервере) — 5–7 предложений в заметках.
-3. Пользователь **вне** `opslab` не должен писать в share (если так задуманы права) — покажите отказ.
+1. Кастомная `404.html` + `error_page`.
+2. Остановите nginx: с `cli` отличие «порт закрыт / connection refused» vs TLS handshake fail — в заметках.
+3. Снова enable nginx.
 
-### 6. Firewall
+### 5. Change — NFS
 
-Разрешите только нужное для lab-подсети:
+1. Share на `/srv/data/nfs/share` или `/srv/nfs/share`, `root:opslab` `2770`.
+2. Экспорт **только** lab CIDR.
+3. Клиент: mount, create file, видно на сервере.
 
-- `80/tcp` (HTTP)
-- NFS-связанные сервисы (`nfs`, `rpc-bind`, `mountd` на firewalld; на ufw — соответствующие порты/профиль)
+### 6. Verify — NFS негативы
 
-**Не** открывайте NFS «в мир» / в NAT-интерфейс без необходимости.
+Неверный путь экспорта; демонстрация `root_squash`; отказ записи вне `opslab` — evidence в `10-evidence.txt`.
 
-### 7. Verify + мини-инцидент «сайт открыт, шара нет»
+### 7. Verify — мини-инцидент
 
-1. Временно уберите правило NFS / остановите `nfs-server`.
-2. HTTP с `cli` работает, mount NFS — нет.
-3. Верните сервис и правила.
-4. Запишите шаги диагностики в `~/lab-notes/10-incident.md`.
+HTTP(S) жив, NFS down (сервис или правило) → диагностика в `10-incident.md` → восстановление.
 
-### 8. Automate — статус сервисов
+### 8. Automate
 
-`/usr/local/bin/lab-services-status.sh` выводит active/inactive для `nginx`, `nfs-server`, слушает ли `:80`, есть ли экспорт (`exportfs -v`). Код 0 только если HTTP OK (NFS — warning в тексте, если down).
+`/usr/local/bin/lab-services-status.sh`: active nginx; слушает `:443` (и `:80` если нужно); `exportfs -v`; локальный `curl -k https://127.0.0.1/`. Exit 0 только если HTTPS OK.
 
 ### 9. Document
 
-`~/lab-notes/10-evidence.txt`: curl с cli, `exportfs -v`, `findmnt` на клиенте, firewall list.  
-`~/lab-notes/10.md` — схема «кто к чему имеет доступ».
-
-SELinux (Rocky/Alma): если отказ — смотрите `ausearch`/`journalctl`, учебные boolean/контексты; не отключайте SELinux «навсегда» без записи в заметках.
+Схема доступа; где лежат crt/key; как клиент доверяет (или почему `-k` только в lab); отсылка к модулям 13–15.
 
 ## Критерии приёмки
 
-- [ ] HTTP с клиента отдаёт вашу страницу
-- [ ] Кастомная 404 работает; отличие «нет сервиса» зафиксировано
-- [ ] NFS смонтирован на клиенте, файл синхронизируется
-- [ ] Негативные тесты NFS (неверный путь / права / root_squash) описаны
-- [ ] Экспорт ограничен подсетью лаборатории
-- [ ] Firewall согласован; мини-инцидент HTTP≠NFS закрыт
-- [ ] Есть evidence, схема доступа, скрипт статуса
+- [ ] HTTPS с `cli` отдаёт вашу страницу (evidence curl/openssl)
+- [ ] TLS ≥ 1.2; key не world-readable
+- [ ] HTTP либо редирект, либо явно вторичен и задокументирован
+- [ ] Кастомная 404; отличие «сервис down» зафиксировано
+- [ ] NFS в lab CIDR; негативы описаны
+- [ ] Мини-инцидент закрыт; скрипт статуса зелёный по HTTPS
 
 ## Подсказки
 
-- После правок exports: `exportfs -rav`.
-- Проверяйте с `cli`, не только с localhost.
-- На firewalld зона должна соответствовать интерфейсу lab-сети.
+| Тема | Debian/Ubuntu | Rocky/Alma |
+|------|---------------|------------|
+| Пакет nginx | `nginx` | `nginx` |
+| NFS | `nfs-kernel-server` | `nfs-utils` |
+| Открыть 443 | ufw/nft | `firewall-cmd --add-service=https` |
+
+Если TLS fail из-за MAC — чините контекст/профиль (модуль 13), не `setenforce 0` навсегда.
 
 ## Очистка
 
-Сервисы оставьте — пригодятся в капстоуне.
+Сервисы и сертификаты оставьте для 12/15.

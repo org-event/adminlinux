@@ -1,61 +1,26 @@
-# Теория — пользователи и права
+# Теория — доступ (mid)
 
-## Модель доступа
+## Модель
 
-Каждый процесс выполняется от имени пользователя. Файлы имеют владельца, группу и режим доступа:
-
-```text
-rwxr-x---  user  group  file
-```
-
-| Символ | Для кого | Значение |
-|--------|----------|----------|
-| rwx | owner | чтение/запись/исполнение |
-| r-x | group | чтение/исполнение |
-| --- | other | нет доступа |
+Владелец / группа / other + (опционально) ACL. SGID на каталоге наследует группу для новых файлов. Sticky (`+t`) — нельзя удалить чужой файл в общем tmp.
 
 ```bash
-ls -l file
-stat file
-chmod 640 file
-chmod u=rw,g=r,o= file
-chown user:group file
-```
-
-## Учётные записи
-
-```bash
-sudo useradd -m -s /bin/bash alice
-sudo passwd alice
-sudo groupadd developers
-sudo usermod -aG developers alice
-id alice
-getent passwd alice
-getent group developers
-```
-
-Файлы: `/etc/passwd`, `/etc/shadow`, `/etc/group`.
-
-## sudo
-
-```bash
-sudo -l
-sudo visudo
-# пример: alice ALL=(ALL) /usr/bin/systemctl
-```
-
-Не раздавайте полный `ALL=(ALL) ALL` без необходимости.
-
-## ACL (когда chmod мало)
-
-```bash
-sudo apt install acl    # Debian, если нет
-# sudo dnf install acl  # RHEL
-sudo setfacl -m u:alice:rw file
+chmod 2770 /srv/opslab          # SGID + rwx для group
+chmod 1770 /srv/opslab/tmp      # sticky
+setfacl -m u:guest1:r -- file
 getfacl file
 ```
 
-## Специальные биты (кратко)
+## sudo
 
-- `SUID/SGID` — осторожно, понимайте зачем;
-- sticky bit на `/tmp` (`chmod +t`) — удалять может владелец файла.
+Только `/etc/sudoers.d/` через `visudo -f` + `visudo -c`. Полный `ALL=(ALL) ALL` — долг, не норма mid+.
+
+## Учётки
+
+```bash
+useradd -m -s /bin/bash name
+usermod -aG group name
+getent passwd name; id name
+```
+
+Файлы истины: `/etc/passwd`, `/etc/shadow`, `/etc/group`.

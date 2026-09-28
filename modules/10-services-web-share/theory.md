@@ -1,44 +1,41 @@
-# Теория — веб и обмен файлами
+# Теория — веб, TLS, NFS
 
-## Nginx как учебный веб-сервер
-
-```bash
-# Debian
-sudo apt install -y nginx
-# RHEL
-sudo dnf install -y nginx
-
-sudo systemctl enable --now nginx
-curl -I http://127.0.0.1/
-```
-
-Конфиги: `/etc/nginx/`. После правок:
+## Nginx
 
 ```bash
-sudo nginx -t
-sudo systemctl reload nginx
+# Debian/Ubuntu: apt install nginx
+# Rocky/Alma:    dnf install nginx
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
-## NFS — сетевая ФС для «внутренней» сети
+Конфиги: `/etc/nginx/`. Document root учебной площадки: `/var/www/lab`.
 
-Сервер экспортирует каталог, клиент монтирует.
+## TLS (must для mid+)
+
+В лаборатории достаточно **самоподписанного** сертификата (или внутреннего CA). Цель — привычка: HTTPS, редирект/раздельные listen, проверка с клиента, открытый `443/tcp` в firewall.
 
 ```bash
-# идеи файлов
-/etc/exports
-sudo exportfs -a
-sudo systemctl enable --now nfs-server   # имя может отличаться
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout /etc/nginx/ssl/lab.key \
+  -out /etc/nginx/ssl/lab.crt \
+  -subj "/CN=srv.lab.local"
 ```
 
-На клиенте:
+В server block: `listen 443 ssl;`, пути к crt/key, `ssl_protocols TLSv1.2 TLSv1.3;`.  
+С клиента: `curl -vk https://<IP>/` (или установка учебного CA в trust store `cli`).
 
-```bash
-sudo mount -t nfs srv:/srv/nfs/share /mnt
-```
+HTTP (80) — либо редирект на HTTPS, либо явная статус-страница с ссылкой; «только plaintext навсегда» для mid+ **не принимается**.
 
-## Безопасность служб
+## NFS
 
-- Слушайте на нужном интерфейсе.
-- Firewall: только необходимые порты.
-- Для NFS не публикуйте экспорт в интернет — только lab-сеть.
-- Отдельный пользователь/права на document root и share.
+Экспорт **только** в host-only/lab подсеть. `exportfs -rav`, проверка с `cli`. Учитывать `root_squash`.
+
+| Семья | Пакет | Сервис |
+|-------|-------|--------|
+| Debian/Ubuntu | `nfs-kernel-server` | `nfs-server` |
+| Rocky/Alma | `nfs-utils` | `nfs-server` |
+
+## Безопасность
+
+- Слушать нужный интерфейс; firewall: `443/tcp` (+ `80` если нужен), NFS только lab.
+- SELinux/AppArmor могут блокировать TLS-пути и NFS — см. модуль 13 (здесь: не отключать MAC «навсегда»).

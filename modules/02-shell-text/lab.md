@@ -1,102 +1,80 @@
-# Лаборатория 02 — оболочка и текст
+# Лаборатория 02 — triage текстом
 
 ## Цель
 
-Находить информацию в файлах и журналах командами, а не «на глаз», и фиксировать доказательства в файлах.
+Собрать evidence-пакет по журналам и `/etc` командами; оформить однострочный/скриптовый отчёт.
 
 ## Окружение
 
-- ВМ `srv` после модуля 01
-- Права `sudo` для чтения части логов
+- `srv` после модуля 01
+- `sudo` для журналов
 
 ## Задания
 
-### 1. Inspect — навигация
+### 1. Inspect — карта логов
 
 ```bash
-cd ~
-pwd
-ls -la /
-ls -ld /etc /var /var/log
+ls -lah /var/log | tee ~/lab-notes/02-varlog.txt
+sudo journalctl --disk-usage
+sudo journalctl -p err..alert -n 80 --no-pager | tee ~/lab-notes/02-errors.txt
 ```
 
-Создайте `~/lab-notes/02-workspace` и три файла `a.txt`, `b.txt`, `c.txt` с разным содержимым (несколько строк слов).
-
-### 2. Change — конвейеры
-
-1. Объедините файлы в `all.txt`.
-2. Посчитайте строки/слова/байты (`wc`).
-3. Топ частот слов (`tr`/`sort`/`uniq`).
+### 2. Change — разбор учёток и шеллов
 
 ```bash
-cd ~/lab-notes/02-workspace
-cat a.txt b.txt c.txt > all.txt
-wc all.txt
-tr -s '[:space:]' '\n' < all.txt | tr 'A-Z' 'a-z' | sort | uniq -c | sort -nr | head
-```
-
-### 3. Verify — разбор /etc/passwd
-
-```bash
-awk -F: '{print $1 " -> " $7}' /etc/passwd | tee ~/lab-notes/02-shells.txt
+awk -F: '{print $1 "\t" $7}' /etc/passwd | tee ~/lab-notes/02-shells.txt
 awk -F: '$7 ~ /(nologin|false)$/ {print $1, $7}' /etc/passwd | tee ~/lab-notes/02-nologin.txt
 ```
 
-### 4. Change — find и безопасный поиск
+Сколько nologin? Запишите число в `02.md`.
 
-1. Найдите в `/etc` файлы `*.conf`, изменённые за последние 7 дней (`find`), сохраните список (ошибок permission — в stderr отдельно или `2>/dev/null` после того, как поняли зачем).
-2. Найдите файлы > 10M в `/var/log` (если есть) — только список путей.
+### 3. Verify — find + размер
 
-```bash
-sudo find /etc -name '*.conf' -mtime -7 2>/dev/null | head -50 | tee ~/lab-notes/02-find-conf.txt
-```
+1. `*.conf` в `/etc`, mtime −7 дней → `02-find-conf.txt` (stderr осознанно).
+2. Файлы в `/var/log` > 5M → список путей.
 
-### 5. Change — diff, cut, простой sed
+### 4. Change — diff конфига
 
-1. Скопируйте `all.txt` в `all-edit.txt`, измените одну строку.
-2. Покажите `diff -u all.txt all-edit.txt`.
-3. Из `/etc/passwd` выведите только username через `cut -d: -f1 | head`.
-4. Одним `sed` замените слово в копии рабочего файла (не в системных!).
+1. `sudo cp /etc/hosts /etc/hosts.bak.lab02`
+2. Добавьте **учебную** строку-комментарий в `/etc/hosts`.
+3. `diff -u` → `~/lab-notes/02-hosts.diff`
+4. Откатите из `.bak`.
 
-### 6. Verify — журналы и код возврата
+### 5. Verify — exit codes
 
-```bash
-sudo journalctl -p err..alert -n 50 --no-pager | tee ~/lab-notes/02-errors.txt
-# или: sudo grep -iE 'error|fail' /var/log/syslog 2>/dev/null | tail -10
-```
-
-Практика `$?`:
+Сохраните в `02-exitcodes.txt`:
 
 ```bash
-true; echo "true => $?"
-false; echo "false => $?"
-ls /no/such/path; echo "ls missing => $?"
+true; echo "true:$?"
+false; echo "false:$?"
+grep -q 'NoSuchPatternXYZ' /etc/passwd; echo "grep_no_match:$?"
 ```
 
-Сохраните выводы в `~/lab-notes/02-exitcodes.txt`.
+В `02.md`: как используете `$?` в скрипте бэкапа/health-check.
 
-### 7. Automate — мини-отчёт одной командой
+### 6. Automate — report
 
-Скрипт `~/lab-notes/bin/lab02-report.sh`: собирает `wc all.txt`, число nologin-пользователей, хвост error-выборки. Запустите и приложите вывод.
+`~/lab-notes/bin/lab02-report.sh`: число nologin, хвост error-журнала (≤20 строк), `journalctl --disk-usage`. Exit 0.
 
-### 8. Document
+### 7. Document
 
-В `~/lab-notes/02.md`: разница `>` и `>>`; зачем `$?`; чем опасен `rm` с неверным путём после `cd`.
+`02.md`: `>` vs `>>`; когда `2>/dev/null` вреден; один пример ложного вывода из-за неправильного pipe.
 
 ## Критерии приёмки
 
-- [ ] Есть `02-workspace` с исходниками и `all.txt`
-- [ ] Есть `02-shells.txt` и выборка nologin
-- [ ] Есть find/diff/exitcodes evidence
-- [ ] Есть выборка ошибок журнала
-- [ ] Есть report-скрипт и заметки Document
-- [ ] Ничего системного не удалено
+- [ ] Есть `02-errors.txt`, shells/nologin, find evidence
+- [ ] Есть `02-hosts.diff` и откат hosts
+- [ ] Exit codes зафиксированы
+- [ ] Report-скрипт работает
+- [ ] Системные файлы не удалены
 
 ## Подсказки
 
-- Нет `/var/log/syslog` — смотрите `journalctl` или `/var/log/messages`.
-- `2>/dev/null` скрывает ошибки — для отладки сначала уберите.
+| Семья | Текстовый syslog (если есть) |
+|-------|------------------------------|
+| Debian/Ubuntu | `/var/log/syslog` или только journal |
+| Rocky/Alma | `/var/log/messages` или journal |
 
 ## Очистка
 
-Можно удалить только `~/lab-notes/02-workspace`, заметки оставьте.
+Удалите только временные копии в home; `.bak` hosts уберите после отката.
